@@ -20,6 +20,24 @@ flowchart LR
 - `TECNICO`: recebe, classifica e atende chamados atribuídos.
 - `ADMIN`: administra usuários, categorias e regras gerais.
 
+## Fluxo de autenticação
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant F as Frontend
+    participant A as API
+    participant B as PostgreSQL
+    U->>F: Cadastro ou login
+    F->>A: Credenciais via HTTPS
+    A->>B: Valida usuário e senha BCrypt
+    A-->>F: Token JWT assinado
+    F->>A: Authorization: Bearer token
+    A-->>F: Recurso protegido conforme perfil
+```
+
+O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `ADMIN` será uma operação administrativa protegida.
+
 ## Estados iniciais do chamado
 
 ```mermaid
@@ -34,4 +52,3 @@ stateDiagram-v2
     RESOLVIDO --> REABERTO
     REABERTO --> EM_ATENDIMENTO
 ```
-
