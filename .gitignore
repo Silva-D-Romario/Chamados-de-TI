@@ -1,0 +1,13 @@
+.env
+.idea/
+.vscode/
+*.iml
+*.log
+.DS_Store
+Thumbs.db
+
+Back/target/
+Front/node_modules/
+Front/dist/
+Front/*.tsbuildinfo
+
