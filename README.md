@@ -48,6 +48,36 @@ cp .env.example .env
 docker compose up -d postgres
 ```
 
+## Executar o backend
+
+Com o PostgreSQL ativo:
+
+```bash
+cd Back
+./mvnw spring-boot:run
+```
+
+A API responde em `http://localhost:8080`. O endpoint público de verificação é `GET /api/v1/status`.
+
+## Executar o frontend
+
+Em outro terminal:
+
+```bash
+cd Front
+npm install
+npm run dev
+```
+
+A interface fica disponível em `http://localhost:5173`.
+
+## Executar as validações
+
+```bash
+cd Back && ./mvnw verify
+cd ../Front && npm run lint && npm run build
+```
+
 ## Estrutura
 
 ```text
@@ -67,5 +97,5 @@ compose.yaml       Serviços locais
 - [ ] Comentários e histórico de alterações.
 - [ ] Regras e indicadores de SLA.
 - [ ] Dashboard, filtros e paginação.
-- [ ] Testes, documentação OpenAPI e CI.
-
+- [x] Pipeline inicial de CI para backend e frontend.
+- [ ] Ampliar testes e adicionar documentação OpenAPI.
