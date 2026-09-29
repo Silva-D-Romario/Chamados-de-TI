@@ -48,6 +48,8 @@ cp .env.example .env
 docker compose up -d postgres
 ```
 
+Antes de usar fora do ambiente local, defina um `JWT_SECRET` forte no arquivo `.env`.
+
 ## Executar o backend
 
 Com o PostgreSQL ativo:
@@ -58,6 +60,16 @@ cd Back
 ```
 
 A API responde em `http://localhost:8080`. O endpoint público de verificação é `GET /api/v1/status`.
+
+### Autenticação
+
+| Método | Endpoint | Acesso |
+| --- | --- | --- |
+| `POST` | `/api/v1/auth/register` | Público |
+| `POST` | `/api/v1/auth/login` | Público |
+| `GET` | `/api/v1/auth/me` | Token JWT |
+
+Novos cadastros recebem o perfil `SOLICITANTE`. Rotas protegidas usam o cabeçalho `Authorization: Bearer <token>`.
 
 ## Executar o frontend
 
@@ -90,8 +102,9 @@ compose.yaml       Serviços locais
 
 ## Roadmap inicial
 
-- [ ] Autenticação e autorização por perfil.
-- [ ] Cadastro e consulta de usuários.
+- [x] Cadastro, login e autenticação JWT.
+- [x] Perfis de usuário: solicitante, técnico e administrador.
+- [ ] Administração e consulta de usuários.
 - [ ] Abertura e acompanhamento de chamados.
 - [ ] Atribuição de técnicos e transições de status.
 - [ ] Comentários e histórico de alterações.
