@@ -71,6 +71,18 @@ A API responde em `http://localhost:8080`. O endpoint público de verificação 
 
 Novos cadastros recebem o perfil `SOLICITANTE`. Rotas protegidas usam o cabeçalho `Authorization: Bearer <token>`.
 
+### Chamados
+
+| Método | Endpoint | Regra |
+| --- | --- | --- |
+| `POST` | `/api/v1/tickets` | Cria um chamado para o usuário autenticado |
+| `GET` | `/api/v1/tickets` | Lista somente os próprios chamados; suporte visualiza todos |
+| `GET` | `/api/v1/tickets/{id}` | Consulta respeitando a mesma regra de acesso |
+| `PUT` | `/api/v1/tickets/{id}` | Solicitante edita o próprio chamado enquanto estiver aberto |
+| `DELETE` | `/api/v1/tickets/{id}` | Solicitante exclui o próprio chamado enquanto estiver aberto |
+
+A listagem é paginada e aceita os parâmetros `page`, `size` e `sort`.
+
 ## Executar o frontend
 
 Em outro terminal:
@@ -105,10 +117,11 @@ compose.yaml       Serviços locais
 - [x] Cadastro, login e autenticação JWT.
 - [x] Perfis de usuário: solicitante, técnico e administrador.
 - [ ] Administração e consulta de usuários.
-- [ ] Abertura e acompanhamento de chamados.
+- [x] Abertura, consulta, edição e exclusão de chamados.
+- [x] Isolamento dos chamados por solicitante.
 - [ ] Atribuição de técnicos e transições de status.
 - [ ] Comentários e histórico de alterações.
 - [ ] Regras e indicadores de SLA.
-- [ ] Dashboard, filtros e paginação.
+- [ ] Dashboard completo e filtros; paginação inicial disponível na API.
 - [x] Pipeline inicial de CI para backend e frontend.
 - [ ] Ampliar testes e adicionar documentação OpenAPI.
