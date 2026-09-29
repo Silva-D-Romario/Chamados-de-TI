@@ -38,6 +38,13 @@ sequenceDiagram
 
 O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `ADMIN` será uma operação administrativa protegida.
 
+## Isolamento de dados
+
+- Solicitantes listam e consultam apenas chamados vinculados ao próprio e-mail autenticado no JWT.
+- A tentativa de consultar um chamado de outro solicitante retorna `404`, evitando revelar que o registro existe.
+- Técnicos e administradores podem consultar a fila geral.
+- Somente o solicitante pode editar ou excluir o próprio chamado, e apenas enquanto o status for `ABERTO`.
+
 ## Estados iniciais do chamado
 
 ```mermaid
