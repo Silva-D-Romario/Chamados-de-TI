@@ -50,6 +50,17 @@ docker compose up -d postgres
 
 Antes de usar fora do ambiente local, defina um `JWT_SECRET` forte no arquivo `.env`.
 
+Para criar o primeiro administrador, defina as variáveis antes de iniciar o backend:
+
+```bash
+export APP_ADMIN_NAME="Administrador"
+export APP_ADMIN_EMAIL="admin@example.com"
+export APP_ADMIN_PASSWORD="uma-senha-segura"
+```
+
+O administrador é criado apenas quando o e-mail ainda não existe. Depois do primeiro acesso, ele pode promover outros usuários para técnico ou administrador pela interface.
+Após uma alteração de perfil, o usuário deve sair e entrar novamente para receber um JWT com a nova permissão.
+
 ## Executar o backend
 
 Com o PostgreSQL ativo:
@@ -80,8 +91,19 @@ Novos cadastros recebem o perfil `SOLICITANTE`. Rotas protegidas usam o cabeçal
 | `GET` | `/api/v1/tickets/{id}` | Consulta respeitando a mesma regra de acesso |
 | `PUT` | `/api/v1/tickets/{id}` | Solicitante edita o próprio chamado enquanto estiver aberto |
 | `DELETE` | `/api/v1/tickets/{id}` | Solicitante exclui o próprio chamado enquanto estiver aberto |
+| `PATCH` | `/api/v1/tickets/{id}/assignment` | Administrador atribui um técnico |
+| `PATCH` | `/api/v1/tickets/{id}/status` | Técnico responsável ou administrador altera o status |
+| `GET` | `/api/v1/tickets/{id}/history` | Retorna o histórico visível ao usuário |
 
 A listagem é paginada e aceita os parâmetros `page`, `size` e `sort`.
+
+### Administração de usuários
+
+| Método | Endpoint | Regra |
+| --- | --- | --- |
+| `GET` | `/api/v1/users` | Lista usuários para administradores |
+| `PATCH` | `/api/v1/users/{id}/role` | Altera o perfil do usuário |
+| `GET` | `/api/v1/users/technicians` | Lista técnicos ativos para a equipe de suporte |
 
 ## Executar o frontend
 
@@ -116,11 +138,12 @@ compose.yaml       Serviços locais
 
 - [x] Cadastro, login e autenticação JWT.
 - [x] Perfis de usuário: solicitante, técnico e administrador.
-- [ ] Administração e consulta de usuários.
+- [x] Administração, consulta e promoção de usuários.
 - [x] Abertura, consulta, edição e exclusão de chamados.
 - [x] Isolamento dos chamados por solicitante.
-- [ ] Atribuição de técnicos e transições de status.
-- [ ] Comentários e histórico de alterações.
+- [x] Atribuição de técnicos e transições de status.
+- [x] Histórico auditável do atendimento.
+- [ ] Comentários entre solicitante e técnico.
 - [ ] Regras e indicadores de SLA.
 - [ ] Dashboard completo e filtros; paginação inicial disponível na API.
 - [x] Pipeline inicial de CI para backend e frontend.
