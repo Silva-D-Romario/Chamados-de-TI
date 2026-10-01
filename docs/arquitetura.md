@@ -8,7 +8,7 @@ flowchart LR
     F -->|HTTP + JWT| B[API Spring Boot]
     B --> A[Autenticação]
     B --> C[Chamados]
-    B --> S[SLA e histórico]
+    B --> S[SLA, comentários e histórico]
     A --> P[(PostgreSQL)]
     C --> P
     S --> P
@@ -52,6 +52,14 @@ O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `A
 - Técnicos alteram apenas chamados atribuídos a eles; administradores podem atuar em toda a fila.
 - As transições seguem a máquina de estados documentada abaixo. Saltos inválidos retornam `409 Conflict`.
 - Criação, atribuição e mudança de status são registradas em `ticket_history`, com autor, data, estados e observação.
+
+## Comentários e SLA
+
+- Solicitantes e suporte podem registrar comentários públicos em chamados que conseguem visualizar.
+- Somente técnicos e administradores criam e consultam comentários internos.
+- O prazo é calculado na abertura conforme a prioridade: 4 horas para crítica, 8 para alta, 24 para média e 48 para baixa.
+- A API classifica o SLA como no prazo, em risco, vencido ou concluído. O estado de risco começa nos 25% finais do prazo.
+- A documentação OpenAPI fica disponível em `/v3/api-docs`, com uma interface interativa em `/swagger-ui.html`.
 
 ## Estados iniciais do chamado
 

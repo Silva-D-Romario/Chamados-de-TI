@@ -94,8 +94,30 @@ Novos cadastros recebem o perfil `SOLICITANTE`. Rotas protegidas usam o cabeçal
 | `PATCH` | `/api/v1/tickets/{id}/assignment` | Administrador atribui um técnico |
 | `PATCH` | `/api/v1/tickets/{id}/status` | Técnico responsável ou administrador altera o status |
 | `GET` | `/api/v1/tickets/{id}/history` | Retorna o histórico visível ao usuário |
+| `POST` | `/api/v1/tickets/{id}/comments` | Adiciona comentário público; suporte também pode criar comentário interno |
+| `GET` | `/api/v1/tickets/{id}/comments` | Lista comentários permitidos para o perfil autenticado |
 
 A listagem é paginada e aceita os parâmetros `page`, `size` e `sort`.
+
+### Prazos de SLA
+
+| Prioridade | Prazo inicial |
+| --- | --- |
+| Crítica | 4 horas |
+| Alta | 8 horas |
+| Média | 24 horas |
+| Baixa | 48 horas |
+
+A resposta do chamado informa `dueAt` e `slaStatus`. Os estados possíveis são `NO_PRAZO`, `EM_RISCO`, `VENCIDO` e `CONCLUIDO`; o risco começa quando resta até 25% do prazo.
+
+### Swagger/OpenAPI
+
+Com o backend ativo:
+
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Especificação OpenAPI: `http://localhost:8080/v3/api-docs`
+
+Para testar rotas protegidas na interface, use **Authorize** e informe o token JWT obtido no login.
 
 ### Administração de usuários
 
@@ -143,8 +165,8 @@ compose.yaml       Serviços locais
 - [x] Isolamento dos chamados por solicitante.
 - [x] Atribuição de técnicos e transições de status.
 - [x] Histórico auditável do atendimento.
-- [ ] Comentários entre solicitante e técnico.
-- [ ] Regras e indicadores de SLA.
+- [x] Comentários públicos e internos entre solicitante e suporte.
+- [x] Regras e indicadores de SLA por prioridade.
 - [ ] Dashboard completo e filtros; paginação inicial disponível na API.
 - [x] Pipeline inicial de CI para backend e frontend.
-- [ ] Ampliar testes e adicionar documentação OpenAPI.
+- [x] Testes de integração e documentação OpenAPI inicial.
