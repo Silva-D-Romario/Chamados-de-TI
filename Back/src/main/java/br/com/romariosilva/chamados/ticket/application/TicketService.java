@@ -21,6 +21,7 @@ import br.com.romariosilva.chamados.ticket.domain.TicketHistoryAction;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketPriority;
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
+import br.com.romariosilva.chamados.ticket.domain.TicketRepository.TicketSummaryProjection;
 import br.com.romariosilva.chamados.ticket.domain.TicketStatus;
 import br.com.romariosilva.chamados.ticket.domain.SlaStatus;
 import br.com.romariosilva.chamados.user.domain.User;
@@ -63,11 +64,19 @@ public class TicketService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<TicketResponse> list(Jwt jwt, Pageable pageable) {
-        Page<Ticket> tickets = hasSupportAccess(jwt)
-                ? ticketRepository.findAll(pageable)
-                : ticketRepository.findAllByRequesterEmailIgnoreCase(jwt.getSubject(), pageable);
+    public PageResponse<TicketResponse> list(Jwt jwt, TicketFilter filter, Pageable pageable) {
+        Page<Ticket> tickets = ticketRepository.search(requesterScope(jwt), filter.status(), filter.priority(),
+                normalizeFilter(filter.category()), filter.technicianId(), normalizeFilter(filter.search()), pageable);
         return PageResponse.from(tickets.map(this::response));
+    }
+
+    @Transactional(readOnly = true)
+    public TicketSummary summary(Jwt jwt, TicketFilter filter) {
+        TicketSummaryProjection summary = ticketRepository.summarize(requesterScope(jwt), filter.status(),
+                filter.priority(), normalizeFilter(filter.category()), filter.technicianId(),
+                normalizeFilter(filter.search()), Instant.now());
+        return new TicketSummary(summary.getTotal(), summary.getOpen(), summary.getInProgress(),
+                summary.getResolved(), summary.getOverdue());
     }
 
     @Transactional(readOnly = true)
@@ -165,6 +174,14 @@ public class TicketService {
         return TicketResponse.from(ticket, slaPolicy.statusOf(ticket, Instant.now()));
     }
 
+    private String requesterScope(Jwt jwt) {
+        return hasSupportAccess(jwt) ? null : jwt.getSubject();
+    }
+
+    private String normalizeFilter(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
     private User currentUser(Jwt jwt) {
         return userRepository.findByEmailIgnoreCase(jwt.getSubject())
                 .filter(User::isActive)
@@ -235,6 +252,17 @@ public class TicketService {
     }
 
     public record TicketData(String title, String description, TicketPriority priority, String category) {
+    }
+
+    public record TicketFilter(
+            TicketStatus status,
+            TicketPriority priority,
+            String category,
+            Long technicianId,
+            String search) {
+    }
+
+    public record TicketSummary(long total, long open, long inProgress, long resolved, long overdue) {
     }
 
     public record TicketResponse(

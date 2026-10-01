@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.romariosilva.chamados.ticket.application.TicketService;
@@ -25,6 +26,8 @@ import br.com.romariosilva.chamados.ticket.application.TicketService.TicketComme
 import br.com.romariosilva.chamados.ticket.application.TicketService.TicketData;
 import br.com.romariosilva.chamados.ticket.application.TicketService.TicketHistoryResponse;
 import br.com.romariosilva.chamados.ticket.application.TicketService.TicketResponse;
+import br.com.romariosilva.chamados.ticket.application.TicketService.TicketFilter;
+import br.com.romariosilva.chamados.ticket.application.TicketService.TicketSummary;
 import br.com.romariosilva.chamados.ticket.domain.TicketPriority;
 import br.com.romariosilva.chamados.ticket.domain.TicketStatus;
 import jakarta.validation.Valid;
@@ -53,8 +56,26 @@ public class TicketController {
     @GetMapping
     public PageResponse<TicketResponse> list(
             JwtAuthenticationToken authentication,
+            @RequestParam(required = false) TicketStatus status,
+            @RequestParam(required = false) TicketPriority priority,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) Long technicianId,
+            @RequestParam(required = false, name = "q") String search,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ticketService.list(authentication.getToken(), pageable);
+        return ticketService.list(authentication.getToken(),
+                new TicketFilter(status, priority, category, technicianId, search), pageable);
+    }
+
+    @GetMapping("/summary")
+    public TicketSummary summary(
+            JwtAuthenticationToken authentication,
+            @RequestParam(required = false) TicketStatus status,
+            @RequestParam(required = false) TicketPriority priority,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) Long technicianId,
+            @RequestParam(required = false, name = "q") String search) {
+        return ticketService.summary(authentication.getToken(),
+                new TicketFilter(status, priority, category, technicianId, search));
     }
 
     @GetMapping("/{id}")
