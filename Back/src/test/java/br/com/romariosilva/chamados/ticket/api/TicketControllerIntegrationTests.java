@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
+import br.com.romariosilva.chamados.ticket.domain.TicketCommentRepository;
 import br.com.romariosilva.chamados.user.domain.User;
 import br.com.romariosilva.chamados.user.domain.UserRepository;
 import br.com.romariosilva.chamados.user.domain.UserRole;
@@ -46,6 +47,9 @@ class TicketControllerIntegrationTests {
     private TicketHistoryRepository historyRepository;
 
     @Autowired
+    private TicketCommentRepository commentRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -53,6 +57,7 @@ class TicketControllerIntegrationTests {
 
     @BeforeEach
     void cleanDatabase() {
+        commentRepository.deleteAll();
         historyRepository.deleteAll();
         ticketRepository.deleteAll();
         userRepository.deleteAll();
@@ -138,6 +143,63 @@ class TicketControllerIntegrationTests {
                 .andExpect(jsonPath("$[0].action").value("CRIADO"))
                 .andExpect(jsonPath("$[1].action").value("ATRIBUIDO"))
                 .andExpect(jsonPath("$[2].note").value("Atendimento iniciado"));
+    }
+
+    @Test
+    void commentsRespectTicketVisibilityAndInternalAccess() throws Exception {
+        String requesterToken = register("Solicitante", "requester@example.com");
+        String otherToken = register("Outro Usuário", "other@example.com");
+        long ticketId = createTicket(requesterToken, "Instalar certificado");
+        User technician = userRepository.save(new User("Técnico", "tech@example.com",
+                passwordEncoder.encode("senha-segura"), UserRole.TECNICO));
+
+        mockMvc.perform(post("/api/v1/tickets/{id}/comments", ticketId)
+                        .header(AUTHORIZATION, bearer(requesterToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"Preciso acessar hoje\",\"internal\":false}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.author.fullName").value("Solicitante"));
+
+        mockMvc.perform(post("/api/v1/tickets/{id}/comments", ticketId)
+                        .with(jwt().jwt(token -> token.subject(technician.getEmail())
+                                .claim("roles", List.of("TECNICO"))))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"Validar com segurança\",\"internal\":true}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.internal").value(true));
+
+        mockMvc.perform(get("/api/v1/tickets/{id}/comments", ticketId)
+                        .header(AUTHORIZATION, bearer(requesterToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        mockMvc.perform(get("/api/v1/tickets/{id}/comments", ticketId)
+                        .with(jwt().jwt(token -> token.subject(technician.getEmail())
+                                .claim("roles", List.of("TECNICO")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+
+        mockMvc.perform(get("/api/v1/tickets/{id}/comments", ticketId)
+                        .header(AUTHORIZATION, bearer(otherToken)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void requesterCannotCreateInternalCommentAndTicketIncludesSla() throws Exception {
+        String token = register("Solicitante", "requester@example.com");
+        long ticketId = createTicket(token, "Configurar VPN");
+
+        mockMvc.perform(get("/api/v1/tickets/{id}", ticketId)
+                        .header(AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dueAt").isNotEmpty())
+                .andExpect(jsonPath("$.slaStatus").value("NO_PRAZO"));
+
+        mockMvc.perform(post("/api/v1/tickets/{id}/comments", ticketId)
+                        .header(AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"Comentário restrito\",\"internal\":true}"))
+                .andExpect(status().isForbidden());
     }
 
     private String register(String name, String email) throws Exception {

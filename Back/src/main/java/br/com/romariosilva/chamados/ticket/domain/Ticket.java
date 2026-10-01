@@ -64,19 +64,23 @@ public class Ticket {
     protected Ticket() {
     }
 
-    public Ticket(String title, String description, TicketPriority priority, String category, User requester) {
+    public Ticket(String title, String description, TicketPriority priority, String category, User requester,
+            Instant dueAt) {
         this.title = title;
         this.description = description;
         this.priority = priority;
         this.category = category;
         this.requester = requester;
+        this.dueAt = dueAt;
     }
 
-    public void updateDetails(String title, String description, TicketPriority priority, String category) {
+    public void updateDetails(String title, String description, TicketPriority priority, String category,
+            Instant dueAt) {
         this.title = title;
         this.description = description;
         this.priority = priority;
         this.category = category;
+        this.dueAt = dueAt;
     }
 
     public void assignTo(User technician) {
@@ -105,6 +109,8 @@ public class Ticket {
     public String getCategory() { return category; }
     public User getRequester() { return requester; }
     public User getTechnician() { return technician; }
+    public Instant getDueAt() { return dueAt; }
+    public Instant getResolvedAt() { return resolvedAt; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 }
