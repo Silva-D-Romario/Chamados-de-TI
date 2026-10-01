@@ -76,7 +76,11 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .priority.baixa { background: #e5f0fc; color: #336b99; }
 .row-actions { display: flex; gap: 5px; }
 .row-actions button { padding: 7px; background: transparent; color: #34695d; font-size: .74rem; }
-.row-actions button:last-child { color: #a33d34; }
+.row-actions .delete-action { color: #a33d34; }
+.sla { width: fit-content; padding: 4px 7px; border-radius: 6px; background: #e7f4eb; color: #367047 !important; }
+.sla.em_risco { background: #fff2cf; color: #8a6518 !important; }
+.sla.vencido { background: #fde3df; color: #a33d34 !important; }
+.sla.concluido { background: #e5f0fc; color: #336b99 !important; }
 .workflow-control { display: grid; gap: 5px; color: #5c716a; font-size: .7rem; }
 .workflow-control select { min-width: 170px; padding: 8px; border: 1px solid #cad7d2; border-radius: 7px; background: #fff; color: #29473f; }
 .history-panel { grid-column: 1 / -1; padding: 16px; border-radius: 9px; background: #f0f5f2; }
@@ -84,6 +88,16 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .history-panel > div { margin-top: 10px; padding-left: 14px; border-left: 2px solid #a8c4bc; }
 .history-panel span { color: #75867f; font-size: .68rem; }
 .history-panel p { margin-top: 3px; color: #405951; }
+.comments-panel { grid-column: 1 / -1; padding: 16px; border-radius: 9px; background: #f5f7f6; }
+.comments-panel > strong { color: #24473f; font-size: .84rem; }
+.comments-panel > div { margin-top: 10px; padding: 10px 12px; border-left: 3px solid #a8c4bc; background: #fff; }
+.comments-panel > div.internal-comment { border-left-color: #e1a92b; background: #fff9e8; }
+.comments-panel span { color: #75867f; font-size: .68rem; }
+.comments-panel p { margin: 4px 0 0; color: #405951; }
+.comments-panel form { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.comments-panel textarea { width: 100%; padding: 10px; border: 1px solid #cad7d2; border-radius: 7px; color: #29473f; font: inherit; resize: vertical; }
+.comments-panel label { display: flex; align-items: center; gap: 7px; color: #5c716a; font-size: .75rem; }
+.comments-panel button { margin-left: auto; padding: 9px 14px; }
 .team-section { margin-top: 54px; scroll-margin-top: 24px; }
 .team-list article { padding: 16px 10px; display: flex; justify-content: space-between; align-items: center; gap: 20px; border-bottom: 1px solid #dbe4e0; }
 .team-list strong, .team-list span { display: block; }

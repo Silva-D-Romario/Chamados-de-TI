@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
+import br.com.romariosilva.chamados.ticket.domain.TicketCommentRepository;
 import br.com.romariosilva.chamados.user.domain.User;
 import br.com.romariosilva.chamados.user.domain.UserRepository;
 import br.com.romariosilva.chamados.user.domain.UserRole;
@@ -40,10 +41,14 @@ class UserControllerIntegrationTests {
     private TicketHistoryRepository historyRepository;
 
     @Autowired
+    private TicketCommentRepository commentRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void cleanDatabase() {
+        commentRepository.deleteAll();
         historyRepository.deleteAll();
         ticketRepository.deleteAll();
         userRepository.deleteAll();

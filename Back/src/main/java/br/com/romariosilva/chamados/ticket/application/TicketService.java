@@ -14,12 +14,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import br.com.romariosilva.chamados.ticket.domain.Ticket;
+import br.com.romariosilva.chamados.ticket.domain.TicketComment;
+import br.com.romariosilva.chamados.ticket.domain.TicketCommentRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistory;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryAction;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketPriority;
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketStatus;
+import br.com.romariosilva.chamados.ticket.domain.SlaStatus;
 import br.com.romariosilva.chamados.user.domain.User;
 import br.com.romariosilva.chamados.user.domain.UserRepository;
 
@@ -34,24 +37,29 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final TicketHistoryRepository historyRepository;
+    private final TicketCommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final SlaPolicy slaPolicy;
 
     public TicketService(TicketRepository ticketRepository, TicketHistoryRepository historyRepository,
-            UserRepository userRepository) {
+            TicketCommentRepository commentRepository, UserRepository userRepository, SlaPolicy slaPolicy) {
         this.ticketRepository = ticketRepository;
         this.historyRepository = historyRepository;
+        this.commentRepository = commentRepository;
         this.userRepository = userRepository;
+        this.slaPolicy = slaPolicy;
     }
 
     @Transactional
     public TicketResponse create(Jwt jwt, TicketData data) {
         User requester = currentUser(jwt);
+        Instant now = Instant.now();
         Ticket ticket = new Ticket(data.title().trim(), data.description().trim(), data.priority(),
-                data.category().trim(), requester);
+                data.category().trim(), requester, slaPolicy.deadlineFor(data.priority(), now));
         ticketRepository.save(ticket);
         historyRepository.save(new TicketHistory(ticket, requester, TicketHistoryAction.CRIADO,
                 null, TicketStatus.ABERTO, "Chamado aberto"));
-        return TicketResponse.from(ticket);
+        return response(ticket);
     }
 
     @Transactional(readOnly = true)
@@ -59,24 +67,26 @@ public class TicketService {
         Page<Ticket> tickets = hasSupportAccess(jwt)
                 ? ticketRepository.findAll(pageable)
                 : ticketRepository.findAllByRequesterEmailIgnoreCase(jwt.getSubject(), pageable);
-        return PageResponse.from(tickets.map(TicketResponse::from));
+        return PageResponse.from(tickets.map(this::response));
     }
 
     @Transactional(readOnly = true)
     public TicketResponse findById(Jwt jwt, Long id) {
-        return TicketResponse.from(visibleTicket(jwt, id));
+        return response(visibleTicket(jwt, id));
     }
 
     @Transactional
     public TicketResponse update(Jwt jwt, Long id, TicketData data) {
         Ticket ticket = ownedOpenTicket(jwt, id);
-        ticket.updateDetails(data.title().trim(), data.description().trim(), data.priority(), data.category().trim());
-        return TicketResponse.from(ticket);
+        ticket.updateDetails(data.title().trim(), data.description().trim(), data.priority(), data.category().trim(),
+                slaPolicy.deadlineFor(data.priority(), Instant.now()));
+        return response(ticket);
     }
 
     @Transactional
     public void delete(Jwt jwt, Long id) {
         Ticket ticket = ownedOpenTicket(jwt, id);
+        commentRepository.deleteAllByTicketId(id);
         historyRepository.deleteAllByTicketId(id);
         ticketRepository.delete(ticket);
     }
@@ -97,7 +107,7 @@ public class TicketService {
         }
         historyRepository.save(new TicketHistory(ticket, actor, TicketHistoryAction.ATRIBUIDO,
                 previousStatus, ticket.getStatus(), "Atribuído a " + technician.getFullName()));
-        return TicketResponse.from(ticket);
+        return response(ticket);
     }
 
     @Transactional
@@ -117,7 +127,7 @@ public class TicketService {
         ticket.changeStatus(newStatus);
         historyRepository.save(new TicketHistory(ticket, actor, TicketHistoryAction.STATUS_ALTERADO,
                 previousStatus, newStatus, normalizeNote(note)));
-        return TicketResponse.from(ticket);
+        return response(ticket);
     }
 
     @Transactional(readOnly = true)
@@ -126,6 +136,33 @@ public class TicketService {
         return historyRepository.findAllByTicketIdOrderByCreatedAtAsc(id).stream()
                 .map(TicketHistoryResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public TicketCommentResponse addComment(Jwt jwt, Long id, CommentData data) {
+        Ticket ticket = visibleTicket(jwt, id);
+        User author = currentUser(jwt);
+        if (data.internal() && !hasSupportAccess(jwt)) {
+            throw new ResponseStatusException(FORBIDDEN,
+                    "Somente a equipe de suporte pode criar comentários internos");
+        }
+        TicketComment comment = commentRepository.save(
+                new TicketComment(ticket, author, data.content().trim(), data.internal()));
+        return TicketCommentResponse.from(comment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TicketCommentResponse> comments(Jwt jwt, Long id) {
+        visibleTicket(jwt, id);
+        boolean support = hasSupportAccess(jwt);
+        return commentRepository.findAllByTicketIdOrderByCreatedAtAsc(id).stream()
+                .filter(comment -> support || !comment.isInternal())
+                .map(TicketCommentResponse::from)
+                .toList();
+    }
+
+    private TicketResponse response(Ticket ticket) {
+        return TicketResponse.from(ticket, slaPolicy.statusOf(ticket, Instant.now()));
     }
 
     private User currentUser(Jwt jwt) {
@@ -209,14 +246,34 @@ public class TicketService {
             String category,
             UserSummary requester,
             UserSummary technician,
+            Instant dueAt,
+            Instant resolvedAt,
+            SlaStatus slaStatus,
             Instant createdAt,
             Instant updatedAt) {
 
-        static TicketResponse from(Ticket ticket) {
+        static TicketResponse from(Ticket ticket, SlaStatus slaStatus) {
             return new TicketResponse(
                     ticket.getId(), ticket.getTitle(), ticket.getDescription(), ticket.getStatus(),
                     ticket.getPriority(), ticket.getCategory(), UserSummary.from(ticket.getRequester()),
-                    UserSummary.from(ticket.getTechnician()), ticket.getCreatedAt(), ticket.getUpdatedAt());
+                    UserSummary.from(ticket.getTechnician()), ticket.getDueAt(), ticket.getResolvedAt(), slaStatus,
+                    ticket.getCreatedAt(), ticket.getUpdatedAt());
+        }
+    }
+
+    public record CommentData(String content, boolean internal) {
+    }
+
+    public record TicketCommentResponse(
+            Long id,
+            String content,
+            boolean internal,
+            UserSummary author,
+            Instant createdAt) {
+
+        static TicketCommentResponse from(TicketComment comment) {
+            return new TicketCommentResponse(comment.getId(), comment.getContent(), comment.isInternal(),
+                    UserSummary.from(comment.getAuthor()), comment.getCreatedAt());
         }
     }
 

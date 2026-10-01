@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import br.com.romariosilva.chamados.user.domain.UserRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
+import br.com.romariosilva.chamados.ticket.domain.TicketCommentRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
 import tools.jackson.databind.ObjectMapper;
 
@@ -34,6 +35,9 @@ class AuthControllerIntegrationTests {
     private TicketHistoryRepository historyRepository;
 
     @Autowired
+    private TicketCommentRepository commentRepository;
+
+    @Autowired
     private TicketRepository ticketRepository;
 
     @Autowired
@@ -41,6 +45,7 @@ class AuthControllerIntegrationTests {
 
     @BeforeEach
     void cleanDatabase() {
+        commentRepository.deleteAll();
         historyRepository.deleteAll();
         ticketRepository.deleteAll();
         userRepository.deleteAll();

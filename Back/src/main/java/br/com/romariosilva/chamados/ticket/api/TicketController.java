@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.romariosilva.chamados.ticket.application.TicketService;
 import br.com.romariosilva.chamados.ticket.application.TicketService.PageResponse;
+import br.com.romariosilva.chamados.ticket.application.TicketService.CommentData;
+import br.com.romariosilva.chamados.ticket.application.TicketService.TicketCommentResponse;
 import br.com.romariosilva.chamados.ticket.application.TicketService.TicketData;
 import br.com.romariosilva.chamados.ticket.application.TicketService.TicketHistoryResponse;
 import br.com.romariosilva.chamados.ticket.application.TicketService.TicketResponse;
@@ -97,6 +99,22 @@ public class TicketController {
         return ticketService.history(authentication.getToken(), id);
     }
 
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<TicketCommentResponse> addComment(
+            JwtAuthenticationToken authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody CommentRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ticketService.addComment(authentication.getToken(), id, request.toData()));
+    }
+
+    @GetMapping("/{id}/comments")
+    public List<TicketCommentResponse> comments(
+            JwtAuthenticationToken authentication,
+            @PathVariable Long id) {
+        return ticketService.comments(authentication.getToken(), id);
+    }
+
     public record TicketRequest(
             @NotBlank @Size(max = 160) String title,
             @NotBlank @Size(max = 5000) String description,
@@ -112,5 +130,11 @@ public class TicketController {
     }
 
     public record StatusRequest(@NotNull TicketStatus status, @Size(max = 1000) String note) {
+    }
+
+    public record CommentRequest(@NotBlank @Size(max = 2000) String content, boolean internal) {
+        CommentData toData() {
+            return new CommentData(content, internal);
+        }
     }
 }
