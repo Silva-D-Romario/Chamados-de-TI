@@ -52,6 +52,10 @@ public class User {
         this.role = role;
     }
 
+    public void changeRole(UserRole role) {
+        this.role = role;
+    }
+
     @PreUpdate
     void updateTimestamp() {
         updatedAt = Instant.now();

@@ -1,22 +1,30 @@
 package br.com.romariosilva.chamados.ticket.api;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
+import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
+import br.com.romariosilva.chamados.user.domain.User;
 import br.com.romariosilva.chamados.user.domain.UserRepository;
+import br.com.romariosilva.chamados.user.domain.UserRole;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -35,10 +43,17 @@ class TicketControllerIntegrationTests {
     private TicketRepository ticketRepository;
 
     @Autowired
+    private TicketHistoryRepository historyRepository;
+
+    @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void cleanDatabase() {
+        historyRepository.deleteAll();
         ticketRepository.deleteAll();
         userRepository.deleteAll();
     }
@@ -89,6 +104,40 @@ class TicketControllerIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(ticketJson("Sem autenticação")))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminAssignsAndTechnicianMovesTicketWithHistory() throws Exception {
+        String requesterToken = register("Solicitante", "requester@example.com");
+        long ticketId = createTicket(requesterToken, "Configurar estação");
+        User admin = userRepository.save(new User("Administrador", "admin@example.com",
+                passwordEncoder.encode("senha-segura"), UserRole.ADMIN));
+        User technician = userRepository.save(new User("Técnico", "tech@example.com",
+                passwordEncoder.encode("senha-segura"), UserRole.TECNICO));
+
+        mockMvc.perform(patch("/api/v1/tickets/{id}/assignment", ticketId)
+                        .with(jwt().jwt(token -> token.subject(admin.getEmail()).claim("roles", List.of("ADMIN"))))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"technicianId\":" + technician.getId() + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.technician.id").value(technician.getId()))
+                .andExpect(jsonPath("$.status").value("EM_TRIAGEM"));
+
+        mockMvc.perform(patch("/api/v1/tickets/{id}/status", ticketId)
+                        .with(jwt().jwt(token -> token.subject(technician.getEmail())
+                                .claim("roles", List.of("TECNICO"))))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"EM_ATENDIMENTO\",\"note\":\"Atendimento iniciado\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("EM_ATENDIMENTO"));
+
+        mockMvc.perform(get("/api/v1/tickets/{id}/history", ticketId)
+                        .header(AUTHORIZATION, bearer(requesterToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].action").value("CRIADO"))
+                .andExpect(jsonPath("$[1].action").value("ATRIBUIDO"))
+                .andExpect(jsonPath("$[2].note").value("Atendimento iniciado"));
     }
 
     private String register(String name, String email) throws Exception {

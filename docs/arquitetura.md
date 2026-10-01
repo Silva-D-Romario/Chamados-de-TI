@@ -45,6 +45,14 @@ O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `A
 - Técnicos e administradores podem consultar a fila geral.
 - Somente o solicitante pode editar ou excluir o próprio chamado, e apenas enquanto o status for `ABERTO`.
 
+## Atendimento e auditoria
+
+- O administrador promove usuários e atribui chamados a técnicos ativos.
+- Ao receber um técnico, o chamado aberto entra automaticamente em `EM_TRIAGEM`.
+- Técnicos alteram apenas chamados atribuídos a eles; administradores podem atuar em toda a fila.
+- As transições seguem a máquina de estados documentada abaixo. Saltos inválidos retornam `409 Conflict`.
+- Criação, atribuição e mudança de status são registradas em `ticket_history`, com autor, data, estados e observação.
+
 ## Estados iniciais do chamado
 
 ```mermaid

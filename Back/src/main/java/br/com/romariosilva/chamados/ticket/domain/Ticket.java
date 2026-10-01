@@ -79,6 +79,19 @@ public class Ticket {
         this.category = category;
     }
 
+    public void assignTo(User technician) {
+        this.technician = technician;
+    }
+
+    public void changeStatus(TicketStatus status) {
+        this.status = status;
+        if (status == TicketStatus.RESOLVIDO || status == TicketStatus.FECHADO) {
+            this.resolvedAt = Instant.now();
+        } else if (status == TicketStatus.REABERTO) {
+            this.resolvedAt = null;
+        }
+    }
+
     @PreUpdate
     void updateTimestamp() {
         updatedAt = Instant.now();

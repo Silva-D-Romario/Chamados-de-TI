@@ -10,6 +10,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import br.com.romariosilva.chamados.user.domain.UserRepository;
+import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
+import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
@@ -29,10 +31,18 @@ class AuthControllerIntegrationTests {
     private UserRepository userRepository;
 
     @Autowired
+    private TicketHistoryRepository historyRepository;
+
+    @Autowired
+    private TicketRepository ticketRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void cleanDatabase() {
+        historyRepository.deleteAll();
+        ticketRepository.deleteAll();
         userRepository.deleteAll();
     }
 
