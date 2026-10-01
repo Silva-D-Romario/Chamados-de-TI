@@ -70,12 +70,26 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .ticket-row:last-child { border-bottom: 0; }
 .ticket-row h3 { margin: 3px 0 5px; color: #24473f; font-size: 1rem; }
 .ticket-row p, .ticket-id { margin: 0; color: #71827c; font-size: .76rem; }
+.ticket-row small { display: block; margin-top: 5px; color: #4f6961; }
 .priority, .ticket-status { width: fit-content; padding: 6px 9px; border-radius: 999px; background: #edf1ef; color: #49625b; font-size: .7rem; text-transform: capitalize; }
 .priority.alta, .priority.critica { background: #fde3df; color: #a33d34; }
 .priority.baixa { background: #e5f0fc; color: #336b99; }
 .row-actions { display: flex; gap: 5px; }
 .row-actions button { padding: 7px; background: transparent; color: #34695d; font-size: .74rem; }
 .row-actions button:last-child { color: #a33d34; }
+.workflow-control { display: grid; gap: 5px; color: #5c716a; font-size: .7rem; }
+.workflow-control select { min-width: 170px; padding: 8px; border: 1px solid #cad7d2; border-radius: 7px; background: #fff; color: #29473f; }
+.history-panel { grid-column: 1 / -1; padding: 16px; border-radius: 9px; background: #f0f5f2; }
+.history-panel > strong { color: #24473f; font-size: .84rem; }
+.history-panel > div { margin-top: 10px; padding-left: 14px; border-left: 2px solid #a8c4bc; }
+.history-panel span { color: #75867f; font-size: .68rem; }
+.history-panel p { margin-top: 3px; color: #405951; }
+.team-section { margin-top: 54px; scroll-margin-top: 24px; }
+.team-list article { padding: 16px 10px; display: flex; justify-content: space-between; align-items: center; gap: 20px; border-bottom: 1px solid #dbe4e0; }
+.team-list strong, .team-list span { display: block; }
+.team-list strong { color: #24473f; }
+.team-list span { margin-top: 4px; color: #71827c; font-size: .76rem; }
+.team-list select { padding: 9px; border: 1px solid #cad7d2; border-radius: 7px; background: #fff; color: #29473f; }
 
 @media (max-width: 760px) {
   .auth-page { grid-template-columns: 1fr; }
@@ -100,4 +114,6 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   .ticket-row { grid-template-columns: 1fr auto; gap: 10px; }
   .ticket-row > div:first-child { grid-column: 1 / -1; }
   .row-actions { grid-column: 1 / -1; }
+  .workflow-control { grid-column: 1 / -1; }
+  .team-list article { align-items: stretch; flex-direction: column; }
 }

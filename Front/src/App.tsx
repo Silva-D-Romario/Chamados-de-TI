@@ -3,7 +3,7 @@ import './App.css'
 
 type ApiState = 'checking' | 'online' | 'offline'
 type AuthMode = 'login' | 'register'
-type User = { id: number; fullName: string; email: string; role: string }
+type User = { id: number; fullName: string; email: string; role: string; active?: boolean }
 type AuthResponse = { accessToken: string; user: User }
 type Ticket = {
   id: number
@@ -13,11 +13,33 @@ type Ticket = {
   priority: string
   category: string
   requester: { id: number; fullName: string }
+  technician: { id: number; fullName: string } | null
   createdAt: string
 }
 type TicketPage = { content: Ticket[]; totalElements: number }
+type TicketHistory = {
+  id: number
+  action: string
+  fromStatus: string | null
+  toStatus: string | null
+  note: string | null
+  actor: { id: number; fullName: string }
+  createdAt: string
+}
 
 const TOKEN_KEY = 'chamados.token'
+const NEXT_STATUSES: Record<string, string[]> = {
+  ABERTO: ['EM_TRIAGEM'],
+  EM_TRIAGEM: ['EM_ATENDIMENTO'],
+  EM_ATENDIMENTO: ['AGUARDANDO_USUARIO', 'RESOLVIDO'],
+  AGUARDANDO_USUARIO: ['EM_ATENDIMENTO'],
+  RESOLVIDO: ['FECHADO', 'REABERTO'],
+  REABERTO: ['EM_ATENDIMENTO'],
+}
+
+function formatStatus(status: string) {
+  return status.replaceAll('_', ' ').toLowerCase()
+}
 
 function App() {
   const [apiState, setApiState] = useState<ApiState>('checking')
@@ -31,6 +53,10 @@ function App() {
   const [ticketError, setTicketError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null)
+  const [users, setUsers] = useState<User[]>([])
+  const [technicians, setTechnicians] = useState<User[]>([])
+  const [historyTicketId, setHistoryTicketId] = useState<number | null>(null)
+  const [history, setHistory] = useState<TicketHistory[]>([])
 
   useEffect(() => {
     fetch('/api/v1/status')
@@ -59,6 +85,11 @@ function App() {
       })
       .catch((error: unknown) => setTicketError(error instanceof Error ? error.message : 'Erro ao carregar chamados.'))
       .finally(() => setTicketsLoading(false))
+
+    if (user.role === 'ADMIN') loadUsers().catch(() => setTicketError('Não foi possível carregar a equipe.'))
+    if (user.role === 'ADMIN' || user.role === 'TECNICO') {
+      loadTechnicians().catch(() => setTicketError('Não foi possível carregar os técnicos.'))
+    }
   }, [user])
 
   async function handleAuth(event: FormEvent<HTMLFormElement>) {
@@ -91,6 +122,83 @@ function App() {
     if (!response.ok) throw new Error('Não foi possível atualizar os chamados.')
     const page = await response.json() as TicketPage
     setTickets(page.content)
+  }
+
+  async function loadUsers() {
+    const response = await fetch('/api/v1/users', { headers: authHeaders() })
+    if (!response.ok) throw new Error('Não foi possível carregar os usuários.')
+    setUsers(await response.json() as User[])
+  }
+
+  async function loadTechnicians() {
+    const response = await fetch('/api/v1/users/technicians', { headers: authHeaders() })
+    if (!response.ok) throw new Error('Não foi possível carregar os técnicos.')
+    setTechnicians(await response.json() as User[])
+  }
+
+  async function changeUserRole(userId: number, role: string) {
+    setTicketError('')
+    const response = await fetch(`/api/v1/users/${userId}/role`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    })
+    if (!response.ok) {
+      setTicketError('Não foi possível alterar o perfil.')
+      return
+    }
+    await Promise.all([loadUsers(), loadTechnicians()])
+  }
+
+  async function assignTicket(ticketId: number, technicianId: string) {
+    if (!technicianId) return
+    setTicketError('')
+    const response = await fetch(`/api/v1/tickets/${ticketId}/assignment`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ technicianId: Number(technicianId) }),
+    })
+    if (!response.ok) {
+      setTicketError('Não foi possível atribuir o chamado.')
+      return
+    }
+    await loadTickets()
+  }
+
+  async function changeTicketStatus(ticket: Ticket, status: string) {
+    if (status === ticket.status) return
+    const note = window.prompt('Observação sobre a mudança de status (opcional):')
+    if (note === null) return
+    setTicketError('')
+    const response = await fetch(`/api/v1/tickets/${ticket.id}/status`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, note }),
+    })
+    if (!response.ok) {
+      setTicketError('Transição de status não permitida.')
+      return
+    }
+    await loadTickets()
+    if (historyTicketId === ticket.id) setHistoryTicketId(null)
+  }
+
+  async function showHistory(ticketId: number) {
+    if (historyTicketId === ticketId) {
+      setHistoryTicketId(null)
+      return
+    }
+    const response = await fetch(`/api/v1/tickets/${ticketId}/history`, { headers: authHeaders() })
+    if (!response.ok) {
+      setTicketError('Não foi possível carregar o histórico.')
+      return
+    }
+    setHistory(await response.json() as TicketHistory[])
+    setHistoryTicketId(ticketId)
+  }
+
+  function authHeaders() {
+    return { Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}` }
   }
 
   async function handleTicketSubmit(event: FormEvent<HTMLFormElement>) {
@@ -192,7 +300,11 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand"><span className="brand-mark">CT</span><span>Chamados TI</span></div>
-        <nav aria-label="Menu principal"><a className="nav-item active" href="#visao-geral">Visão geral</a><a className="nav-item" href="#chamados">Chamados</a></nav>
+        <nav aria-label="Menu principal">
+          <a className="nav-item active" href="#visao-geral">Visão geral</a>
+          <a className="nav-item" href="#chamados">Chamados</a>
+          {user.role === 'ADMIN' && <a className="nav-item" href="#equipe">Equipe</a>}
+        </nav>
         <div className="user-menu"><span className="user-avatar">{user.fullName.charAt(0).toUpperCase()}</span><div><strong>{user.fullName}</strong><small>{user.role.toLowerCase()}</small></div><button type="button" onClick={logout}>Sair</button></div>
       </aside>
 
@@ -229,15 +341,51 @@ function App() {
             <div className="ticket-list">
               {tickets.map((ticket) => (
                 <article className="ticket-row" key={ticket.id}>
-                  <div><span className="ticket-id">#{ticket.id}</span><h3>{ticket.title}</h3><p>{ticket.category} · {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}</p></div>
+                  <div><span className="ticket-id">#{ticket.id}</span><h3>{ticket.title}</h3><p>{ticket.category} · {ticket.requester.fullName} · {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}</p>{ticket.technician && <small>Técnico: {ticket.technician.fullName}</small>}</div>
                   <span className={`priority ${ticket.priority.toLowerCase()}`}>{ticket.priority.toLowerCase()}</span>
-                  <span className="ticket-status">{ticket.status.replaceAll('_', ' ').toLowerCase()}</span>
-                  {ticket.requester.id === user.id && ticket.status === 'ABERTO' && <div className="row-actions"><button type="button" onClick={() => openTicketForm(ticket)}>Editar</button><button type="button" onClick={() => deleteTicket(ticket)}>Excluir</button></div>}
+                  <span className="ticket-status">{formatStatus(ticket.status)}</span>
+                  <div className="row-actions">
+                    {ticket.requester.id === user.id && ticket.status === 'ABERTO' && <><button type="button" onClick={() => openTicketForm(ticket)}>Editar</button><button type="button" onClick={() => deleteTicket(ticket)}>Excluir</button></>}
+                    <button type="button" onClick={() => showHistory(ticket.id)}>Histórico</button>
+                  </div>
+                  {user.role === 'ADMIN' && (
+                    <label className="workflow-control">Atribuir técnico
+                      <select value={ticket.technician?.id ?? ''} onChange={(event) => assignTicket(ticket.id, event.target.value)}>
+                        <option value="">Selecione</option>
+                        {technicians.map((technician) => <option key={technician.id} value={technician.id}>{technician.fullName}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  {(user.role === 'ADMIN' || user.role === 'TECNICO') && NEXT_STATUSES[ticket.status]?.length > 0 && (
+                    <label className="workflow-control">Próximo status
+                      <select value="" onChange={(event) => changeTicketStatus(ticket, event.target.value)}>
+                        <option value="">Selecione</option>
+                        {NEXT_STATUSES[ticket.status].map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  {historyTicketId === ticket.id && (
+                    <div className="history-panel">
+                      <strong>Histórico do atendimento</strong>
+                      {history.map((item) => <div key={item.id}><span>{new Date(item.createdAt).toLocaleString('pt-BR')}</span><p>{item.actor.fullName}: {item.note ?? formatStatus(item.action)}{item.toStatus ? ` — ${formatStatus(item.toStatus)}` : ''}</p></div>)}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>
           )}
         </section>
+
+        {user.role === 'ADMIN' && (
+          <section className="team-section" id="equipe">
+            <div className="section-heading"><div><p className="eyebrow">ADMINISTRAÇÃO</p><h2>Equipe e permissões</h2></div></div>
+            <div className="team-list">
+              {users.map((member) => (
+                <article key={member.id}><div><strong>{member.fullName}</strong><span>{member.email}</span></div><select value={member.role} onChange={(event) => changeUserRole(member.id, event.target.value)}><option value="SOLICITANTE">Solicitante</option><option value="TECNICO">Técnico</option><option value="ADMIN">Administrador</option></select></article>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   )
