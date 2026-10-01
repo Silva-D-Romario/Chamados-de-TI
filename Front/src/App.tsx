@@ -14,6 +14,9 @@ type Ticket = {
   category: string
   requester: { id: number; fullName: string }
   technician: { id: number; fullName: string } | null
+  dueAt: string
+  resolvedAt: string | null
+  slaStatus: string
   createdAt: string
 }
 type TicketPage = { content: Ticket[]; totalElements: number }
@@ -24,6 +27,13 @@ type TicketHistory = {
   toStatus: string | null
   note: string | null
   actor: { id: number; fullName: string }
+  createdAt: string
+}
+type TicketComment = {
+  id: number
+  content: string
+  internal: boolean
+  author: { id: number; fullName: string }
   createdAt: string
 }
 
@@ -57,6 +67,8 @@ function App() {
   const [technicians, setTechnicians] = useState<User[]>([])
   const [historyTicketId, setHistoryTicketId] = useState<number | null>(null)
   const [history, setHistory] = useState<TicketHistory[]>([])
+  const [commentsTicketId, setCommentsTicketId] = useState<number | null>(null)
+  const [comments, setComments] = useState<TicketComment[]>([])
 
   useEffect(() => {
     fetch('/api/v1/status')
@@ -195,6 +207,37 @@ function App() {
     }
     setHistory(await response.json() as TicketHistory[])
     setHistoryTicketId(ticketId)
+  }
+
+  async function showComments(ticketId: number) {
+    if (commentsTicketId === ticketId) {
+      setCommentsTicketId(null)
+      return
+    }
+    const response = await fetch(`/api/v1/tickets/${ticketId}/comments`, { headers: authHeaders() })
+    if (!response.ok) {
+      setTicketError('Não foi possível carregar os comentários.')
+      return
+    }
+    setComments(await response.json() as TicketComment[])
+    setCommentsTicketId(ticketId)
+  }
+
+  async function addComment(event: FormEvent<HTMLFormElement>, ticketId: number) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const response = await fetch(`/api/v1/tickets/${ticketId}/comments`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: form.get('content'), internal: form.get('internal') === 'on' }),
+    })
+    if (!response.ok) {
+      setTicketError('Não foi possível adicionar o comentário.')
+      return
+    }
+    event.currentTarget.reset()
+    const refresh = await fetch(`/api/v1/tickets/${ticketId}/comments`, { headers: authHeaders() })
+    setComments(await refresh.json() as TicketComment[])
   }
 
   function authHeaders() {
@@ -341,12 +384,13 @@ function App() {
             <div className="ticket-list">
               {tickets.map((ticket) => (
                 <article className="ticket-row" key={ticket.id}>
-                  <div><span className="ticket-id">#{ticket.id}</span><h3>{ticket.title}</h3><p>{ticket.category} · {ticket.requester.fullName} · {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}</p>{ticket.technician && <small>Técnico: {ticket.technician.fullName}</small>}</div>
+                  <div><span className="ticket-id">#{ticket.id}</span><h3>{ticket.title}</h3><p>{ticket.category} · {ticket.requester.fullName} · {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}</p>{ticket.technician && <small>Técnico: {ticket.technician.fullName}</small>}<small className={`sla ${ticket.slaStatus.toLowerCase()}`}>SLA: {formatStatus(ticket.slaStatus)} · {new Date(ticket.dueAt).toLocaleString('pt-BR')}</small></div>
                   <span className={`priority ${ticket.priority.toLowerCase()}`}>{ticket.priority.toLowerCase()}</span>
                   <span className="ticket-status">{formatStatus(ticket.status)}</span>
                   <div className="row-actions">
-                    {ticket.requester.id === user.id && ticket.status === 'ABERTO' && <><button type="button" onClick={() => openTicketForm(ticket)}>Editar</button><button type="button" onClick={() => deleteTicket(ticket)}>Excluir</button></>}
+                    {ticket.requester.id === user.id && ticket.status === 'ABERTO' && <><button type="button" onClick={() => openTicketForm(ticket)}>Editar</button><button className="delete-action" type="button" onClick={() => deleteTicket(ticket)}>Excluir</button></>}
                     <button type="button" onClick={() => showHistory(ticket.id)}>Histórico</button>
+                    <button type="button" onClick={() => showComments(ticket.id)}>Comentários</button>
                   </div>
                   {user.role === 'ADMIN' && (
                     <label className="workflow-control">Atribuir técnico
@@ -368,6 +412,18 @@ function App() {
                     <div className="history-panel">
                       <strong>Histórico do atendimento</strong>
                       {history.map((item) => <div key={item.id}><span>{new Date(item.createdAt).toLocaleString('pt-BR')}</span><p>{item.actor.fullName}: {item.note ?? formatStatus(item.action)}{item.toStatus ? ` — ${formatStatus(item.toStatus)}` : ''}</p></div>)}
+                    </div>
+                  )}
+                  {commentsTicketId === ticket.id && (
+                    <div className="comments-panel">
+                      <strong>Comentários</strong>
+                      {comments.length === 0 && <p>Nenhum comentário adicionado.</p>}
+                      {comments.map((comment) => <div key={comment.id} className={comment.internal ? 'internal-comment' : ''}><span>{new Date(comment.createdAt).toLocaleString('pt-BR')} · {comment.author.fullName}{comment.internal ? ' · interno' : ''}</span><p>{comment.content}</p></div>)}
+                      <form onSubmit={(event) => addComment(event, ticket.id)}>
+                        <textarea name="content" rows={3} maxLength={2000} placeholder="Escreva uma atualização..." required />
+                        {(user.role === 'ADMIN' || user.role === 'TECNICO') && <label><input name="internal" type="checkbox" /> Visível somente para o suporte</label>}
+                        <button type="submit">Comentar</button>
+                      </form>
                     </div>
                   )}
                 </article>
