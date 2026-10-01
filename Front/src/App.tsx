@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import './App.css'
 
 type ApiState = 'checking' | 'online' | 'offline'
@@ -19,7 +19,9 @@ type Ticket = {
   slaStatus: string
   createdAt: string
 }
-type TicketPage = { content: Ticket[]; totalElements: number }
+type TicketPage = { content: Ticket[]; page: number; totalElements: number; totalPages: number }
+type TicketSummary = { total: number; open: number; inProgress: number; resolved: number; overdue: number }
+type TicketFilters = { q: string; status: string; priority: string; category: string; technicianId: string }
 type TicketHistory = {
   id: number
   action: string
@@ -59,6 +61,10 @@ function App() {
   const [authError, setAuthError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [tickets, setTickets] = useState<Ticket[]>([])
+  const [ticketPage, setTicketPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [summary, setSummary] = useState<TicketSummary>({ total: 0, open: 0, inProgress: 0, resolved: 0, overdue: 0 })
+  const [filters, setFilters] = useState<TicketFilters>({ q: '', status: '', priority: '', category: '', technicianId: '' })
   const [ticketsLoading, setTicketsLoading] = useState(true)
   const [ticketError, setTicketError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -69,6 +75,31 @@ function App() {
   const [history, setHistory] = useState<TicketHistory[]>([])
   const [commentsTicketId, setCommentsTicketId] = useState<number | null>(null)
   const [comments, setComments] = useState<TicketComment[]>([])
+
+  const filterParams = useCallback(() => {
+    const params = new URLSearchParams()
+    Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value) })
+    return params
+  }, [filters])
+
+  const loadTickets = useCallback(async () => {
+    const params = filterParams()
+    params.set('page', String(ticketPage))
+    params.set('size', '10')
+    const token = localStorage.getItem(TOKEN_KEY)
+    const response = await fetch(`/api/v1/tickets?${params}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!response.ok) throw new Error('Não foi possível atualizar os chamados.')
+    const page = await response.json() as TicketPage
+    setTickets(page.content)
+    setTotalPages(page.totalPages)
+  }, [filterParams, ticketPage])
+
+  const loadSummary = useCallback(async () => {
+    const token = localStorage.getItem(TOKEN_KEY)
+    const response = await fetch(`/api/v1/tickets/summary?${filterParams()}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!response.ok) throw new Error('Não foi possível atualizar os indicadores.')
+    setSummary(await response.json() as TicketSummary)
+  }, [filterParams])
 
   useEffect(() => {
     fetch('/api/v1/status')
@@ -88,21 +119,20 @@ function App() {
 
   useEffect(() => {
     if (!user) return
-    const token = localStorage.getItem(TOKEN_KEY)
-    fetch('/api/v1/tickets', { headers: { Authorization: `Bearer ${token}` } })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Não foi possível carregar os chamados.')
-        const page = await response.json() as TicketPage
-        setTickets(page.content)
-      })
-      .catch((error: unknown) => setTicketError(error instanceof Error ? error.message : 'Erro ao carregar chamados.'))
-      .finally(() => setTicketsLoading(false))
-
     if (user.role === 'ADMIN') loadUsers().catch(() => setTicketError('Não foi possível carregar a equipe.'))
     if (user.role === 'ADMIN' || user.role === 'TECNICO') {
       loadTechnicians().catch(() => setTicketError('Não foi possível carregar os técnicos.'))
     }
   }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    // Atualiza a visão sempre que página ou filtros mudarem.
+    // oxlint-disable-next-line react/set-state-in-effect
+    Promise.all([loadTickets(), loadSummary()])
+      .catch((error: unknown) => setTicketError(error instanceof Error ? error.message : 'Erro ao carregar chamados.'))
+      .finally(() => setTicketsLoading(false))
+  }, [user, loadTickets, loadSummary])
 
   async function handleAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -128,12 +158,22 @@ function App() {
     }
   }
 
-  async function loadTickets() {
-    const token = localStorage.getItem(TOKEN_KEY)
-    const response = await fetch('/api/v1/tickets', { headers: { Authorization: `Bearer ${token}` } })
-    if (!response.ok) throw new Error('Não foi possível atualizar os chamados.')
-    const page = await response.json() as TicketPage
-    setTickets(page.content)
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    setTicketPage(0)
+    setFilters({
+      q: String(form.get('q') ?? ''),
+      status: String(form.get('status') ?? ''),
+      priority: String(form.get('priority') ?? ''),
+      category: String(form.get('category') ?? ''),
+      technicianId: String(form.get('technicianId') ?? ''),
+    })
+  }
+
+  function clearFilters() {
+    setTicketPage(0)
+    setFilters({ q: '', status: '', priority: '', category: '', technicianId: '' })
   }
 
   async function loadUsers() {
@@ -174,7 +214,7 @@ function App() {
       setTicketError('Não foi possível atribuir o chamado.')
       return
     }
-    await loadTickets()
+    await Promise.all([loadTickets(), loadSummary()])
   }
 
   async function changeTicketStatus(ticket: Ticket, status: string) {
@@ -191,7 +231,7 @@ function App() {
       setTicketError('Transição de status não permitida.')
       return
     }
-    await loadTickets()
+    await Promise.all([loadTickets(), loadSummary()])
     if (historyTicketId === ticket.id) setHistoryTicketId(null)
   }
 
@@ -262,7 +302,7 @@ function App() {
         body: JSON.stringify(payload),
       })
       if (!response.ok) throw new Error('Não foi possível salvar o chamado.')
-      await loadTickets()
+      await Promise.all([loadTickets(), loadSummary()])
       closeTicketForm()
     } catch (error) {
       setTicketError(error instanceof Error ? error.message : 'Erro ao salvar chamado.')
@@ -279,7 +319,7 @@ function App() {
         method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}` },
       })
       if (!response.ok) throw new Error('Não foi possível excluir o chamado.')
-      await loadTickets()
+      await Promise.all([loadTickets(), loadSummary()])
     } catch (error) {
       setTicketError(error instanceof Error ? error.message : 'Erro ao excluir chamado.')
     }
@@ -304,10 +344,6 @@ function App() {
   }
 
   const statusLabel = { checking: 'Verificando API', online: 'API conectada', offline: 'API desconectada' }[apiState]
-  const openCount = tickets.filter((ticket) => ticket.status === 'ABERTO').length
-  const progressCount = tickets.filter((ticket) => ['EM_TRIAGEM', 'EM_ATENDIMENTO', 'AGUARDANDO_USUARIO'].includes(ticket.status)).length
-  const resolvedCount = tickets.filter((ticket) => ['RESOLVIDO', 'FECHADO'].includes(ticket.status)).length
-
   if (!sessionChecked) return <div className="loading-screen">Validando sessão...</div>
 
   if (!user) {
@@ -370,13 +406,23 @@ function App() {
         )}
 
         <section className="metrics" aria-label="Indicadores">
-          <article><span>Chamados abertos</span><strong>{openCount}</strong><small>Nesta página</small></article>
-          <article><span>Em atendimento</span><strong>{progressCount}</strong><small>Nesta página</small></article>
-          <article><span>Resolvidos</span><strong>{resolvedCount}</strong><small>Nesta página</small></article>
+          <article><span>Total de chamados</span><strong>{summary.total}</strong><small>Com os filtros atuais</small></article>
+          <article><span>Abertos</span><strong>{summary.open}</strong><small>Aguardando triagem</small></article>
+          <article><span>Em andamento</span><strong>{summary.inProgress}</strong><small>Na fila de suporte</small></article>
+          <article><span>Resolvidos</span><strong>{summary.resolved}</strong><small>Concluídos</small></article>
+          <article className={summary.overdue > 0 ? 'metric-alert' : ''}><span>SLA vencido</span><strong>{summary.overdue}</strong><small>Exigem atenção</small></article>
         </section>
 
         <section className="tickets" id="chamados">
           <div className="section-heading"><div><p className="eyebrow">ATIVIDADE</p><h2>Chamados recentes</h2></div></div>
+          <form className="ticket-filters" key={JSON.stringify(filters)} onSubmit={applyFilters}>
+            <label className="filter-search">Buscar<input name="q" defaultValue={filters.q} placeholder="Título ou descrição" /></label>
+            <label>Status<select name="status" defaultValue={filters.status}><option value="">Todos</option>{Object.keys(NEXT_STATUSES).map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}<option value="FECHADO">fechado</option></select></label>
+            <label>Prioridade<select name="priority" defaultValue={filters.priority}><option value="">Todas</option><option value="BAIXA">Baixa</option><option value="MEDIA">Média</option><option value="ALTA">Alta</option><option value="CRITICA">Crítica</option></select></label>
+            <label>Categoria<input name="category" defaultValue={filters.category} placeholder="Ex.: Hardware" /></label>
+            {(user.role === 'ADMIN' || user.role === 'TECNICO') && <label>Técnico<select name="technicianId" defaultValue={filters.technicianId}><option value="">Todos</option>{technicians.map((technician) => <option key={technician.id} value={technician.id}>{technician.fullName}</option>)}</select></label>}
+            <div className="filter-actions"><button type="submit">Filtrar</button><button className="secondary-button" type="button" onClick={clearFilters}>Limpar</button></div>
+          </form>
           {ticketError && !formOpen && <p className="form-error ticket-message" role="alert">{ticketError}</p>}
           {ticketsLoading ? <div className="empty-state"><p>Carregando chamados...</p></div> : tickets.length === 0 ? (
             <div className="empty-state"><span aria-hidden="true">✓</span><h3>Nenhum chamado para exibir</h3><p>Use “Novo chamado” para registrar sua primeira solicitação.</p></div>
@@ -430,6 +476,7 @@ function App() {
               ))}
             </div>
           )}
+          {totalPages > 1 && <div className="pagination"><button type="button" disabled={ticketPage === 0} onClick={() => setTicketPage((page) => page - 1)}>Anterior</button><span>Página {ticketPage + 1} de {totalPages}</span><button type="button" disabled={ticketPage + 1 >= totalPages} onClick={() => setTicketPage((page) => page + 1)}>Próxima</button></div>}
         </section>
 
         {user.role === 'ADMIN' && (

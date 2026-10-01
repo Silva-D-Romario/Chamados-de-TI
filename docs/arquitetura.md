@@ -61,6 +61,13 @@ O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `A
 - A API classifica o SLA como no prazo, em risco, vencido ou concluído. O estado de risco começa nos 25% finais do prazo.
 - A documentação OpenAPI fica disponível em `/v3/api-docs`, com uma interface interativa em `/swagger-ui.html`.
 
+## Consulta e indicadores
+
+- A listagem oferece busca textual e filtros por status, prioridade, categoria e técnico.
+- A paginação é executada no banco de dados e o frontend navega em páginas de dez registros.
+- O resumo operacional contabiliza toda a visão permitida ao usuário, não apenas a página atual.
+- O mesmo escopo de segurança é aplicado à listagem e aos indicadores: solicitantes veem somente seus dados e a equipe de suporte acessa a fila geral.
+
 ## Estados iniciais do chamado
 
 ```mermaid

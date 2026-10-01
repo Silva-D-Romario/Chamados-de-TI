@@ -88,6 +88,7 @@ Novos cadastros recebem o perfil `SOLICITANTE`. Rotas protegidas usam o cabeçal
 | --- | --- | --- |
 | `POST` | `/api/v1/tickets` | Cria um chamado para o usuário autenticado |
 | `GET` | `/api/v1/tickets` | Lista somente os próprios chamados; suporte visualiza todos |
+| `GET` | `/api/v1/tickets/summary` | Retorna indicadores gerais respeitando usuário e filtros |
 | `GET` | `/api/v1/tickets/{id}` | Consulta respeitando a mesma regra de acesso |
 | `PUT` | `/api/v1/tickets/{id}` | Solicitante edita o próprio chamado enquanto estiver aberto |
 | `DELETE` | `/api/v1/tickets/{id}` | Solicitante exclui o próprio chamado enquanto estiver aberto |
@@ -97,7 +98,17 @@ Novos cadastros recebem o perfil `SOLICITANTE`. Rotas protegidas usam o cabeçal
 | `POST` | `/api/v1/tickets/{id}/comments` | Adiciona comentário público; suporte também pode criar comentário interno |
 | `GET` | `/api/v1/tickets/{id}/comments` | Lista comentários permitidos para o perfil autenticado |
 
-A listagem é paginada e aceita os parâmetros `page`, `size` e `sort`.
+A listagem é paginada e aceita `page`, `size` e `sort`. Também pode ser filtrada por:
+
+| Parâmetro | Exemplo | Função |
+| --- | --- | --- |
+| `q` | `notebook` | Busca no título e na descrição |
+| `status` | `EM_ATENDIMENTO` | Filtra pela etapa do fluxo |
+| `priority` | `ALTA` | Filtra pela prioridade |
+| `category` | `Hardware` | Filtra pela categoria |
+| `technicianId` | `3` | Filtra pelo técnico responsável |
+
+O endpoint de resumo aceita os mesmos filtros e retorna totais de chamados abertos, em andamento, resolvidos e com SLA vencido.
 
 ### Prazos de SLA
 
@@ -167,6 +178,6 @@ compose.yaml       Serviços locais
 - [x] Histórico auditável do atendimento.
 - [x] Comentários públicos e internos entre solicitante e suporte.
 - [x] Regras e indicadores de SLA por prioridade.
-- [ ] Dashboard completo e filtros; paginação inicial disponível na API.
+- [x] Dashboard, busca, filtros e paginação integrada.
 - [x] Pipeline inicial de CI para backend e frontend.
 - [x] Testes de integração e documentação OpenAPI inicial.

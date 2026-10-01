@@ -202,6 +202,41 @@ class TicketControllerIntegrationTests {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void filtersPaginateAndSummarizeOnlyVisibleTickets() throws Exception {
+        String token = register("Solicitante", "requester@example.com");
+        String otherToken = register("Outro", "other@example.com");
+        createTicket(token, "Notebook sem imagem", "MEDIA", "Hardware");
+        createTicket(token, "Instalar editor", "ALTA", "Software");
+        createTicket(otherToken, "Notebook de outro usuário", "MEDIA", "Hardware");
+
+        mockMvc.perform(get("/api/v1/tickets")
+                        .header(AUTHORIZATION, bearer(token))
+                        .param("q", "notebook")
+                        .param("priority", "MEDIA")
+                        .param("category", "Hardware")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Notebook sem imagem"));
+
+        mockMvc.perform(get("/api/v1/tickets/summary")
+                        .header(AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.open").value(2))
+                .andExpect(jsonPath("$.inProgress").value(0))
+                .andExpect(jsonPath("$.resolved").value(0))
+                .andExpect(jsonPath("$.overdue").value(0));
+
+        mockMvc.perform(get("/api/v1/tickets/summary")
+                        .header(AUTHORIZATION, bearer(token))
+                        .param("priority", "ALTA"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1));
+    }
+
     private String register(String name, String email) throws Exception {
         String body = """
                 {"fullName":"%s","email":"%s","password":"senha-segura"}
@@ -215,10 +250,14 @@ class TicketControllerIntegrationTests {
     }
 
     private long createTicket(String token, String title) throws Exception {
+        return createTicket(token, title, "MEDIA", "Hardware");
+    }
+
+    private long createTicket(String token, String title, String priority, String category) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/tickets")
                         .header(AUTHORIZATION, bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(ticketJson(title)))
+                        .content(ticketJson(title, priority, category)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("ABERTO"))
                 .andReturn();
@@ -226,14 +265,18 @@ class TicketControllerIntegrationTests {
     }
 
     private String ticketJson(String title) {
+        return ticketJson(title, "MEDIA", "Hardware");
+    }
+
+    private String ticketJson(String title, String priority, String category) {
         return """
                 {
                   "title":"%s",
                   "description":"Descrição detalhada do problema",
-                  "priority":"MEDIA",
-                  "category":"Hardware"
+                  "priority":"%s",
+                  "category":"%s"
                 }
-                """.formatted(title);
+                """.formatted(title, priority, category);
     }
 
     private String bearer(String token) {
