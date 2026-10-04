@@ -38,6 +38,7 @@ type TicketComment = {
   author: { id: number; fullName: string }
   createdAt: string
 }
+type TicketCategory = { id: number; name: string; active: boolean }
 
 const TOKEN_KEY = 'chamados.token'
 const NEXT_STATUSES: Record<string, string[]> = {
@@ -75,6 +76,8 @@ function App() {
   const [history, setHistory] = useState<TicketHistory[]>([])
   const [commentsTicketId, setCommentsTicketId] = useState<number | null>(null)
   const [comments, setComments] = useState<TicketComment[]>([])
+  const [categories, setCategories] = useState<TicketCategory[]>([])
+  const [allCategories, setAllCategories] = useState<TicketCategory[]>([])
 
   const filterParams = useCallback(() => {
     const params = new URLSearchParams()
@@ -119,7 +122,11 @@ function App() {
 
   useEffect(() => {
     if (!user) return
-    if (user.role === 'ADMIN') loadUsers().catch(() => setTicketError('Não foi possível carregar a equipe.'))
+    loadCategories().catch(() => setTicketError('Não foi possível carregar as categorias.'))
+    if (user.role === 'ADMIN') {
+      loadUsers().catch(() => setTicketError('Não foi possível carregar a equipe.'))
+      loadAllCategories().catch(() => setTicketError('Não foi possível carregar todas as categorias.'))
+    }
     if (user.role === 'ADMIN' || user.role === 'TECNICO') {
       loadTechnicians().catch(() => setTicketError('Não foi possível carregar os técnicos.'))
     }
@@ -186,6 +193,46 @@ function App() {
     const response = await fetch('/api/v1/users/technicians', { headers: authHeaders() })
     if (!response.ok) throw new Error('Não foi possível carregar os técnicos.')
     setTechnicians(await response.json() as User[])
+  }
+
+  async function loadCategories() {
+    const response = await fetch('/api/v1/categories', { headers: authHeaders() })
+    if (!response.ok) throw new Error('Não foi possível carregar as categorias.')
+    setCategories(await response.json() as TicketCategory[])
+  }
+
+  async function loadAllCategories() {
+    const response = await fetch('/api/v1/categories/admin', { headers: authHeaders() })
+    if (!response.ok) throw new Error('Não foi possível carregar as categorias.')
+    setAllCategories(await response.json() as TicketCategory[])
+  }
+
+  async function createCategory(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const response = await fetch('/api/v1/categories', {
+      method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: form.get('name') }),
+    })
+    if (!response.ok) {
+      setTicketError(response.status === 409 ? 'Esta categoria já existe.' : 'Não foi possível criar a categoria.')
+      return
+    }
+    event.currentTarget.reset()
+    await Promise.all([loadCategories(), loadAllCategories()])
+  }
+
+  async function toggleCategory(category: TicketCategory) {
+    const response = await fetch(`/api/v1/categories/${category.id}`, {
+      method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: category.name, active: !category.active }),
+    })
+    if (!response.ok) {
+      setTicketError('Não foi possível alterar a categoria.')
+      return
+    }
+    if (category.name === filters.category) clearFilters()
+    await Promise.all([loadCategories(), loadAllCategories()])
   }
 
   async function changeUserRole(userId: number, role: string) {
@@ -383,6 +430,7 @@ function App() {
           <a className="nav-item active" href="#visao-geral">Visão geral</a>
           <a className="nav-item" href="#chamados">Chamados</a>
           {user.role === 'ADMIN' && <a className="nav-item" href="#equipe">Equipe</a>}
+          {user.role === 'ADMIN' && <a className="nav-item" href="#categorias">Categorias</a>}
         </nav>
         <div className="user-menu"><span className="user-avatar">{user.fullName.charAt(0).toUpperCase()}</span><div><strong>{user.fullName}</strong><small>{user.role.toLowerCase()}</small></div><button type="button" onClick={logout}>Sair</button></div>
       </aside>
@@ -396,7 +444,7 @@ function App() {
             <div className="section-heading"><div><p className="eyebrow">CHAMADO</p><h2>{editingTicket ? 'Editar chamado' : 'Novo chamado'}</h2></div><button className="text-button" type="button" onClick={closeTicketForm}>Cancelar</button></div>
             <form key={editingTicket?.id ?? 'new'} onSubmit={handleTicketSubmit}>
               <label className="wide">Título<input name="title" defaultValue={editingTicket?.title} maxLength={160} required /></label>
-              <label>Categoria<input name="category" defaultValue={editingTicket?.category} maxLength={80} placeholder="Ex.: Hardware" required /></label>
+              <label>Categoria<select name="category" defaultValue={editingTicket?.category ?? ''} required><option value="" disabled>Selecione</option>{categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}</select></label>
               <label>Prioridade<select name="priority" defaultValue={editingTicket?.priority ?? 'MEDIA'}><option value="BAIXA">Baixa</option><option value="MEDIA">Média</option><option value="ALTA">Alta</option><option value="CRITICA">Crítica</option></select></label>
               <label className="wide">Descrição<textarea name="description" defaultValue={editingTicket?.description} rows={5} maxLength={5000} required /></label>
               {ticketError && <p className="form-error wide" role="alert">{ticketError}</p>}
@@ -419,7 +467,7 @@ function App() {
             <label className="filter-search">Buscar<input name="q" defaultValue={filters.q} placeholder="Título ou descrição" /></label>
             <label>Status<select name="status" defaultValue={filters.status}><option value="">Todos</option>{Object.keys(NEXT_STATUSES).map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}<option value="FECHADO">fechado</option></select></label>
             <label>Prioridade<select name="priority" defaultValue={filters.priority}><option value="">Todas</option><option value="BAIXA">Baixa</option><option value="MEDIA">Média</option><option value="ALTA">Alta</option><option value="CRITICA">Crítica</option></select></label>
-            <label>Categoria<input name="category" defaultValue={filters.category} placeholder="Ex.: Hardware" /></label>
+            <label>Categoria<select name="category" defaultValue={filters.category}><option value="">Todas</option>{categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}</select></label>
             {(user.role === 'ADMIN' || user.role === 'TECNICO') && <label>Técnico<select name="technicianId" defaultValue={filters.technicianId}><option value="">Todos</option>{technicians.map((technician) => <option key={technician.id} value={technician.id}>{technician.fullName}</option>)}</select></label>}
             <div className="filter-actions"><button type="submit">Filtrar</button><button className="secondary-button" type="button" onClick={clearFilters}>Limpar</button></div>
           </form>
@@ -485,6 +533,18 @@ function App() {
             <div className="team-list">
               {users.map((member) => (
                 <article key={member.id}><div><strong>{member.fullName}</strong><span>{member.email}</span></div><select value={member.role} onChange={(event) => changeUserRole(member.id, event.target.value)}><option value="SOLICITANTE">Solicitante</option><option value="TECNICO">Técnico</option><option value="ADMIN">Administrador</option></select></article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {user.role === 'ADMIN' && (
+          <section className="team-section" id="categorias">
+            <div className="section-heading"><div><p className="eyebrow">CONFIGURAÇÃO</p><h2>Categorias de chamados</h2></div></div>
+            <form className="category-form" onSubmit={createCategory}><label>Nova categoria<input name="name" maxLength={80} placeholder="Ex.: Impressoras" required /></label><button type="submit">Adicionar</button></form>
+            <div className="team-list category-list">
+              {allCategories.map((category) => (
+                <article key={category.id}><div><strong>{category.name}</strong><span>{category.active ? 'Disponível para novos chamados' : 'Categoria inativa'}</span></div><button className={category.active ? 'deactivate-button' : 'secondary-button'} type="button" onClick={() => toggleCategory(category)}>{category.active ? 'Desativar' : 'Ativar'}</button></article>
               ))}
             </div>
           </section>
