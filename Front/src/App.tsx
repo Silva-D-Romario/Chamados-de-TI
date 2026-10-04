@@ -39,6 +39,14 @@ type TicketComment = {
   createdAt: string
 }
 type TicketCategory = { id: number; name: string; active: boolean }
+type TicketAttachment = {
+  id: number
+  originalName: string
+  contentType: string
+  sizeBytes: number
+  uploader: { id: number; fullName: string }
+  createdAt: string
+}
 
 const TOKEN_KEY = 'chamados.token'
 const NEXT_STATUSES: Record<string, string[]> = {
@@ -78,6 +86,8 @@ function App() {
   const [comments, setComments] = useState<TicketComment[]>([])
   const [categories, setCategories] = useState<TicketCategory[]>([])
   const [allCategories, setAllCategories] = useState<TicketCategory[]>([])
+  const [attachmentsTicketId, setAttachmentsTicketId] = useState<number | null>(null)
+  const [attachments, setAttachments] = useState<TicketAttachment[]>([])
 
   const filterParams = useCallback(() => {
     const params = new URLSearchParams()
@@ -233,6 +243,50 @@ function App() {
     }
     if (category.name === filters.category) clearFilters()
     await Promise.all([loadCategories(), loadAllCategories()])
+  }
+
+  async function showAttachments(ticketId: number) {
+    if (attachmentsTicketId === ticketId) {
+      setAttachmentsTicketId(null)
+      return
+    }
+    const response = await fetch(`/api/v1/tickets/${ticketId}/attachments`, { headers: authHeaders() })
+    if (!response.ok) {
+      setTicketError('Não foi possível carregar os anexos.')
+      return
+    }
+    setAttachments(await response.json() as TicketAttachment[])
+    setAttachmentsTicketId(ticketId)
+  }
+
+  async function uploadAttachment(event: FormEvent<HTMLFormElement>, ticketId: number) {
+    event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form)
+    const response = await fetch(`/api/v1/tickets/${ticketId}/attachments`, {
+      method: 'POST', headers: authHeaders(), body: data,
+    })
+    if (!response.ok) {
+      setTicketError('Use um arquivo PDF, PNG, JPG ou TXT com até 5 MB.')
+      return
+    }
+    form.reset()
+    const refresh = await fetch(`/api/v1/tickets/${ticketId}/attachments`, { headers: authHeaders() })
+    setAttachments(await refresh.json() as TicketAttachment[])
+  }
+
+  async function downloadAttachment(ticketId: number, attachment: TicketAttachment) {
+    const response = await fetch(`/api/v1/tickets/${ticketId}/attachments/${attachment.id}`, { headers: authHeaders() })
+    if (!response.ok) {
+      setTicketError('Não foi possível baixar o anexo.')
+      return
+    }
+    const url = URL.createObjectURL(await response.blob())
+    const link = document.createElement('a')
+    link.href = url
+    link.download = attachment.originalName
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   async function changeUserRole(userId: number, role: string) {
@@ -485,6 +539,7 @@ function App() {
                     {ticket.requester.id === user.id && ticket.status === 'ABERTO' && <><button type="button" onClick={() => openTicketForm(ticket)}>Editar</button><button className="delete-action" type="button" onClick={() => deleteTicket(ticket)}>Excluir</button></>}
                     <button type="button" onClick={() => showHistory(ticket.id)}>Histórico</button>
                     <button type="button" onClick={() => showComments(ticket.id)}>Comentários</button>
+                    <button type="button" onClick={() => showAttachments(ticket.id)}>Anexos</button>
                   </div>
                   {user.role === 'ADMIN' && (
                     <label className="workflow-control">Atribuir técnico
@@ -517,6 +572,18 @@ function App() {
                         <textarea name="content" rows={3} maxLength={2000} placeholder="Escreva uma atualização..." required />
                         {(user.role === 'ADMIN' || user.role === 'TECNICO') && <label><input name="internal" type="checkbox" /> Visível somente para o suporte</label>}
                         <button type="submit">Comentar</button>
+                      </form>
+                    </div>
+                  )}
+                  {attachmentsTicketId === ticket.id && (
+                    <div className="attachments-panel">
+                      <strong>Anexos do chamado</strong>
+                      {attachments.length === 0 && <p>Nenhum arquivo anexado.</p>}
+                      {attachments.map((attachment) => <div key={attachment.id}><div><span>{attachment.originalName}</span><small>{attachment.uploader.fullName} · {(attachment.sizeBytes / 1024).toFixed(1)} KB · {new Date(attachment.createdAt).toLocaleString('pt-BR')}</small></div><button type="button" onClick={() => downloadAttachment(ticket.id, attachment)}>Baixar</button></div>)}
+                      <form onSubmit={(event) => uploadAttachment(event, ticket.id)}>
+                        <label>Adicionar arquivo<input name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" required /></label>
+                        <small>PDF, PNG, JPG ou TXT de até 5 MB.</small>
+                        <button type="submit">Enviar</button>
                       </form>
                     </div>
                   )}
