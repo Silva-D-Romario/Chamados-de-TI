@@ -21,5 +21,8 @@ security:
     expiration-minutes: 10
 
 app:
+  sla-alerts:
+    enabled: false
+    interval-ms: 3600000
   attachments:
     directory: target/test-attachments

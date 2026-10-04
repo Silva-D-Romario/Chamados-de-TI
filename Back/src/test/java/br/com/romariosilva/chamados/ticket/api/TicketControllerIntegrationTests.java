@@ -17,6 +17,8 @@ import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketCommentRepository;
 import br.com.romariosilva.chamados.attachment.domain.TicketAttachmentRepository;
+import br.com.romariosilva.chamados.notification.application.NotificationService;
+import br.com.romariosilva.chamados.notification.domain.NotificationRepository;
 import br.com.romariosilva.chamados.user.domain.User;
 import br.com.romariosilva.chamados.user.domain.UserRepository;
 import br.com.romariosilva.chamados.user.domain.UserRole;
@@ -56,6 +58,12 @@ class TicketControllerIntegrationTests {
     private TicketAttachmentRepository attachmentRepository;
 
     @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -63,6 +71,7 @@ class TicketControllerIntegrationTests {
 
     @BeforeEach
     void cleanDatabase() {
+        notificationRepository.deleteAll();
         attachmentRepository.deleteAll();
         commentRepository.deleteAll();
         historyRepository.deleteAll();
@@ -207,6 +216,55 @@ class TicketControllerIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"Comentário restrito\",\"internal\":true}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void slaAlertsAreAutomaticDeduplicatedAndIsolatedByRecipient() throws Exception {
+        String ownerToken = register("Solicitante", "owner@example.com");
+        String otherToken = register("Outro usuário", "other@example.com");
+        long ticketId = createTicket(ownerToken, "Servidor indisponível", "MEDIA", "Hardware");
+        var ticket = ticketRepository.findById(ticketId).orElseThrow();
+
+        notificationService.generateSlaNotifications(ticket.getDueAt().minusSeconds(60 * 60));
+        notificationService.generateSlaNotifications(ticket.getDueAt().minusSeconds(60 * 60));
+
+        MvcResult listResult = mockMvc.perform(get("/api/v1/notifications")
+                        .header(AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].ticketId").value(ticketId))
+                .andExpect(jsonPath("$[0].type").value("SLA_EM_RISCO"))
+                .andExpect(jsonPath("$[0].readAt").doesNotExist())
+                .andReturn();
+
+        long notificationId = objectMapper.readTree(listResult.getResponse().getContentAsString())
+                .get(0).get("id").asLong();
+
+        mockMvc.perform(get("/api/v1/notifications/unread-count")
+                        .header(AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(1));
+
+        mockMvc.perform(get("/api/v1/notifications")
+                        .header(AUTHORIZATION, bearer(otherToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(patch("/api/v1/notifications/{id}/read", notificationId)
+                        .header(AUTHORIZATION, bearer(otherToken)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(patch("/api/v1/notifications/{id}/read", notificationId)
+                        .header(AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.readAt").isNotEmpty());
+
+        notificationService.generateSlaNotifications(ticket.getDueAt().plusSeconds(1));
+
+        mockMvc.perform(get("/api/v1/notifications/unread-count")
+                        .header(AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(1));
     }
 
     @Test
