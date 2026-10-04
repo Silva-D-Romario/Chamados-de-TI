@@ -190,6 +190,8 @@ cd Back && ./mvnw verify
 cd ../Front && npm run lint && npm run build
 ```
 
+O backend mantém testes rápidos com H2 e um teste de integração com PostgreSQL 16 via Testcontainers. Para executar a suíte completa localmente, o Docker precisa estar ativo. O teste sobe um banco temporário, aplica todas as migrations Flyway, valida o mapeamento JPA e persiste relacionamentos reais.
+
 ## Estrutura
 
 ```text
@@ -217,5 +219,5 @@ compose.yaml       Serviços locais
 - [x] Testes de integração e documentação OpenAPI inicial.
 - [x] Anexos protegidos nos chamados.
 - [x] Alertas automáticos de SLA e notificações.
-- [ ] Testes de integração com PostgreSQL real.
+- [x] Testes de integração com PostgreSQL real.
 - [ ] Deploy público com dados de demonstração.
