@@ -75,6 +75,14 @@ O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `A
 - Solicitantes e técnicos consultam somente categorias ativas.
 - Chamados novos ou editados validam a categoria no backend; categorias inativas permanecem registradas nos chamados antigos para preservar o histórico.
 
+## Armazenamento de anexos
+
+- A tabela `ticket_attachments` mantém nome original, tipo, tamanho, responsável e vínculo com o chamado.
+- O conteúdo é armazenado fora do banco em um diretório configurável, usando identificadores aleatórios como nome físico.
+- Upload, listagem e download reutilizam o isolamento por solicitante; técnicos e administradores acessam a fila geral.
+- O backend limita arquivos a 5 MB e aceita somente PDF, PNG, JPEG e texto simples.
+- Ao excluir um chamado aberto, seus metadados e arquivos físicos também são removidos.
+
 ## Estados iniciais do chamado
 
 ```mermaid
