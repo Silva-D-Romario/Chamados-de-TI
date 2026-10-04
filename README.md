@@ -130,6 +130,19 @@ Listagem, envio e download seguem a mesma regra de visibilidade do chamado. O no
 
 A resposta do chamado informa `dueAt` e `slaStatus`. Os estados possíveis são `NO_PRAZO`, `EM_RISCO`, `VENCIDO` e `CONCLUIDO`; o risco começa quando resta até 25% do prazo.
 
+### Alertas de SLA
+
+O backend verifica periodicamente os chamados não concluídos. Ao entrar em risco ou vencer, cria uma notificação persistente e sem duplicação para o solicitante e, quando houver atribuição, para o técnico responsável.
+
+| Método | Endpoint | Regra |
+| --- | --- | --- |
+| `GET` | `/api/v1/notifications` | Lista apenas as notificações do usuário autenticado |
+| `GET` | `/api/v1/notifications/unread-count` | Retorna a quantidade ainda não lida |
+| `PATCH` | `/api/v1/notifications/{id}/read` | Marca uma notificação própria como lida |
+| `PATCH` | `/api/v1/notifications/read-all` | Marca todas as notificações próprias como lidas |
+
+O intervalo padrão é de 60 segundos e pode ser alterado com `SLA_ALERT_INTERVAL_MS`. A interface atualiza os alertas automaticamente no mesmo intervalo.
+
 ### Swagger/OpenAPI
 
 Com o backend ativo:
@@ -203,6 +216,6 @@ compose.yaml       Serviços locais
 - [x] Pipeline inicial de CI para backend e frontend.
 - [x] Testes de integração e documentação OpenAPI inicial.
 - [x] Anexos protegidos nos chamados.
-- [ ] Alertas automáticos de SLA e notificações.
+- [x] Alertas automáticos de SLA e notificações.
 - [ ] Testes de integração com PostgreSQL real.
 - [ ] Deploy público com dados de demonstração.
