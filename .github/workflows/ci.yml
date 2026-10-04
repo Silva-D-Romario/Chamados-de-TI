@@ -24,7 +24,7 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - name: Executar testes
+      - name: Executar testes H2 e PostgreSQL
         run: ./mvnw --batch-mode verify
 
   frontend:
