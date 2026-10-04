@@ -237,6 +237,17 @@ class TicketControllerIntegrationTests {
                 .andExpect(jsonPath("$.total").value(1));
     }
 
+    @Test
+    void rejectsUnknownCategoryWhenCreatingTicket() throws Exception {
+        String token = register("Solicitante", "requester@example.com");
+
+        mockMvc.perform(post("/api/v1/tickets")
+                        .header(AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(ticketJson("Categoria inválida", "MEDIA", "Categoria inexistente")))
+                .andExpect(status().isBadRequest());
+    }
+
     private String register(String name, String email) throws Exception {
         String body = """
                 {"fullName":"%s","email":"%s","password":"senha-segura"}
