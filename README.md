@@ -138,6 +138,17 @@ Para testar rotas protegidas na interface, use **Authorize** e informe o token J
 | `PATCH` | `/api/v1/users/{id}/role` | Altera o perfil do usuário |
 | `GET` | `/api/v1/users/technicians` | Lista técnicos ativos para a equipe de suporte |
 
+### Categorias
+
+| Método | Endpoint | Regra |
+| --- | --- | --- |
+| `GET` | `/api/v1/categories` | Lista categorias ativas para usuários autenticados |
+| `GET` | `/api/v1/categories/admin` | Lista todas as categorias para administradores |
+| `POST` | `/api/v1/categories` | Administrador cria uma categoria |
+| `PATCH` | `/api/v1/categories/{id}` | Administrador renomeia, ativa ou desativa uma categoria |
+
+Novos chamados aceitam somente categorias ativas do catálogo. Categorias são desativadas em vez de excluídas para preservar o histórico dos chamados existentes.
+
 ## Executar o frontend
 
 Em outro terminal:
@@ -179,5 +190,10 @@ compose.yaml       Serviços locais
 - [x] Comentários públicos e internos entre solicitante e suporte.
 - [x] Regras e indicadores de SLA por prioridade.
 - [x] Dashboard, busca, filtros e paginação integrada.
+- [x] Catálogo de categorias administrável.
 - [x] Pipeline inicial de CI para backend e frontend.
 - [x] Testes de integração e documentação OpenAPI inicial.
+- [ ] Anexos nos chamados.
+- [ ] Alertas automáticos de SLA e notificações.
+- [ ] Testes de integração com PostgreSQL real.
+- [ ] Deploy público com dados de demonstração.
