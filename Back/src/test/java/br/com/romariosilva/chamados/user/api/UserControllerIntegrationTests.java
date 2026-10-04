@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
+import br.com.romariosilva.chamados.notification.domain.NotificationRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
 import br.com.romariosilva.chamados.attachment.domain.TicketAttachmentRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketCommentRepository;
@@ -39,6 +40,9 @@ class UserControllerIntegrationTests {
     private TicketRepository ticketRepository;
 
     @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
     private TicketHistoryRepository historyRepository;
 
     @Autowired
@@ -52,6 +56,7 @@ class UserControllerIntegrationTests {
 
     @BeforeEach
     void cleanDatabase() {
+        notificationRepository.deleteAll();
         attachmentRepository.deleteAll();
         commentRepository.deleteAll();
         historyRepository.deleteAll();

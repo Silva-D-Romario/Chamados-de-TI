@@ -34,6 +34,9 @@ security:
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:120}
 
 app:
+  sla-alerts:
+    enabled: ${SLA_ALERTS_ENABLED:true}
+    interval-ms: ${SLA_ALERT_INTERVAL_MS:60000}
   attachments:
     directory: ${ATTACHMENTS_DIR:./data/attachments}
   bootstrap-admin:

@@ -8,8 +8,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
+
+    @EntityGraph(attributePaths = { "requester", "technician" })
+    @Query("SELECT ticket FROM Ticket ticket WHERE ticket.resolvedAt IS NULL")
+    List<Ticket> findAllPendingForSlaAlerts();
 
     @EntityGraph(attributePaths = { "requester", "technician" })
     @Query("""

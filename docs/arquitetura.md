@@ -83,6 +83,13 @@ O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `A
 - O backend limita arquivos a 5 MB e aceita somente PDF, PNG, JPEG e texto simples.
 - Ao excluir um chamado aberto, seus metadados e arquivos físicos também são removidos.
 
+## Alertas de SLA
+
+- Um agendador avalia periodicamente os chamados ainda não concluídos.
+- Ao entrar em risco ou vencer, o sistema notifica o solicitante e o técnico responsável, quando houver.
+- A restrição única por chamado, destinatário e tipo impede alertas duplicados.
+- Cada usuário consulta e marca como lidas somente as próprias notificações.
+
 ## Estados iniciais do chamado
 
 ```mermaid

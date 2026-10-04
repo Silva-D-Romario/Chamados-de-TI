@@ -47,6 +47,14 @@ type TicketAttachment = {
   uploader: { id: number; fullName: string }
   createdAt: string
 }
+type Notification = {
+  id: number
+  ticketId: number
+  type: string
+  message: string
+  readAt: string | null
+  createdAt: string
+}
 
 const TOKEN_KEY = 'chamados.token'
 const NEXT_STATUSES: Record<string, string[]> = {
@@ -88,6 +96,8 @@ function App() {
   const [allCategories, setAllCategories] = useState<TicketCategory[]>([])
   const [attachmentsTicketId, setAttachmentsTicketId] = useState<number | null>(null)
   const [attachments, setAttachments] = useState<TicketAttachment[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
 
   const filterParams = useCallback(() => {
     const params = new URLSearchParams()
@@ -113,6 +123,19 @@ function App() {
     if (!response.ok) throw new Error('Não foi possível atualizar os indicadores.')
     setSummary(await response.json() as TicketSummary)
   }, [filterParams])
+
+  const loadNotifications = useCallback(async () => {
+    const token = localStorage.getItem(TOKEN_KEY)
+    const headers = { Authorization: `Bearer ${token}` }
+    const [listResponse, countResponse] = await Promise.all([
+      fetch('/api/v1/notifications', { headers }),
+      fetch('/api/v1/notifications/unread-count', { headers }),
+    ])
+    if (!listResponse.ok || !countResponse.ok) throw new Error('Não foi possível atualizar as notificações.')
+    setNotifications(await listResponse.json() as Notification[])
+    const unread = await countResponse.json() as { count: number }
+    setUnreadNotifications(unread.count)
+  }, [])
 
   useEffect(() => {
     fetch('/api/v1/status')
@@ -150,6 +173,16 @@ function App() {
       .catch((error: unknown) => setTicketError(error instanceof Error ? error.message : 'Erro ao carregar chamados.'))
       .finally(() => setTicketsLoading(false))
   }, [user, loadTickets, loadSummary])
+
+  useEffect(() => {
+    if (!user) return
+    // oxlint-disable-next-line react/set-state-in-effect
+    loadNotifications().catch(() => setTicketError('Não foi possível carregar as notificações.'))
+    const interval = window.setInterval(() => {
+      loadNotifications().catch(() => undefined)
+    }, 60_000)
+    return () => window.clearInterval(interval)
+  }, [user, loadNotifications])
 
   async function handleAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -287,6 +320,28 @@ function App() {
     link.download = attachment.originalName
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  async function markNotificationAsRead(notificationId: number) {
+    const response = await fetch(`/api/v1/notifications/${notificationId}/read`, {
+      method: 'PATCH', headers: authHeaders(),
+    })
+    if (!response.ok) {
+      setTicketError('Não foi possível atualizar a notificação.')
+      return
+    }
+    await loadNotifications()
+  }
+
+  async function markAllNotificationsAsRead() {
+    const response = await fetch('/api/v1/notifications/read-all', {
+      method: 'PATCH', headers: authHeaders(),
+    })
+    if (!response.ok) {
+      setTicketError('Não foi possível atualizar as notificações.')
+      return
+    }
+    await loadNotifications()
   }
 
   async function changeUserRole(userId: number, role: string) {
@@ -441,6 +496,8 @@ function App() {
     localStorage.removeItem(TOKEN_KEY)
     setUser(null)
     setTickets([])
+    setNotifications([])
+    setUnreadNotifications(0)
     setAuthMode('login')
   }
 
@@ -482,6 +539,7 @@ function App() {
         <div className="brand"><span className="brand-mark">CT</span><span>Chamados TI</span></div>
         <nav aria-label="Menu principal">
           <a className="nav-item active" href="#visao-geral">Visão geral</a>
+          <a className="nav-item" href="#notificacoes">Notificações {unreadNotifications > 0 && <strong className="notification-badge">{unreadNotifications}</strong>}</a>
           <a className="nav-item" href="#chamados">Chamados</a>
           {user.role === 'ADMIN' && <a className="nav-item" href="#equipe">Equipe</a>}
           {user.role === 'ADMIN' && <a className="nav-item" href="#categorias">Categorias</a>}
@@ -492,6 +550,21 @@ function App() {
       <main className="dashboard">
         <header className="topbar"><div><p className="eyebrow">CENTRAL DE ATENDIMENTO</p><h1 id="visao-geral">Visão geral</h1></div><span className={`api-status ${apiState}`}><span aria-hidden="true" />{statusLabel}</span></header>
         <section className="welcome-card"><div><p className="eyebrow">OLÁ, {user.fullName.toUpperCase()}</p><h2>Gerencie solicitações de TI em um só lugar.</h2><p>Abra e acompanhe seus chamados com segurança.</p></div><button type="button" onClick={() => openTicketForm()}>Novo chamado</button></section>
+
+        <section className="notifications-section" id="notificacoes">
+          <div className="section-heading"><div><p className="eyebrow">ALERTAS DE SLA</p><h2>Notificações</h2></div>{unreadNotifications > 0 && <button className="text-button" type="button" onClick={markAllNotificationsAsRead}>Marcar todas como lidas</button>}</div>
+          {notifications.length === 0 ? <p className="notifications-empty">Nenhum alerta de SLA no momento.</p> : (
+            <div className="notification-list">
+              {notifications.map((notification) => (
+                <article className={notification.readAt ? 'notification-read' : ''} key={notification.id}>
+                  <span className={`notification-kind ${notification.type === 'SLA_VENCIDO' ? 'overdue' : ''}`}>{notification.type === 'SLA_VENCIDO' ? 'SLA vencido' : 'SLA em risco'}</span>
+                  <div><strong>{notification.message}</strong><small>{new Date(notification.createdAt).toLocaleString('pt-BR')}</small></div>
+                  {!notification.readAt && <button type="button" onClick={() => markNotificationAsRead(notification.id)}>Marcar como lida</button>}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         {formOpen && (
           <section className="ticket-form-card">

@@ -26,6 +26,7 @@ import br.com.romariosilva.chamados.ticket.domain.TicketStatus;
 import br.com.romariosilva.chamados.ticket.domain.SlaStatus;
 import br.com.romariosilva.chamados.category.domain.TicketCategoryRepository;
 import br.com.romariosilva.chamados.attachment.application.TicketAttachmentService;
+import br.com.romariosilva.chamados.notification.domain.NotificationRepository;
 import br.com.romariosilva.chamados.user.domain.User;
 import br.com.romariosilva.chamados.user.domain.UserRepository;
 
@@ -46,10 +47,12 @@ public class TicketService {
     private final SlaPolicy slaPolicy;
     private final TicketCategoryRepository categoryRepository;
     private final TicketAttachmentService attachmentService;
+    private final NotificationRepository notificationRepository;
 
     public TicketService(TicketRepository ticketRepository, TicketHistoryRepository historyRepository,
             TicketCommentRepository commentRepository, UserRepository userRepository, SlaPolicy slaPolicy,
-            TicketCategoryRepository categoryRepository, TicketAttachmentService attachmentService) {
+            TicketCategoryRepository categoryRepository, TicketAttachmentService attachmentService,
+            NotificationRepository notificationRepository) {
         this.ticketRepository = ticketRepository;
         this.historyRepository = historyRepository;
         this.commentRepository = commentRepository;
@@ -57,6 +60,7 @@ public class TicketService {
         this.slaPolicy = slaPolicy;
         this.categoryRepository = categoryRepository;
         this.attachmentService = attachmentService;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional
@@ -105,6 +109,7 @@ public class TicketService {
     public void delete(Jwt jwt, Long id) {
         Ticket ticket = ownedOpenTicket(jwt, id);
         attachmentService.deleteAllFromTicket(id);
+        notificationRepository.deleteAllByTicketId(id);
         commentRepository.deleteAllByTicketId(id);
         historyRepository.deleteAllByTicketId(id);
         ticketRepository.delete(ticket);
