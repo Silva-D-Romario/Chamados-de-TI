@@ -5,6 +5,7 @@
 nav { display: grid; gap: 8px; }
 .nav-item { padding: 12px 14px; border-radius: 9px; color: #b8cec8; text-decoration: none; font-size: .92rem; }
 .nav-item:hover, .nav-item.active { background: #284b44; color: #fff; }
+.notification-badge { min-width: 20px; height: 20px; padding: 0 6px; display: inline-grid; place-items: center; margin-left: 5px; border-radius: 999px; background: #c9f269; color: #102f29; font-size: .68rem; }
 .dashboard { padding: 48px clamp(24px, 5vw, 76px); }
 .topbar, .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
 .eyebrow { margin: 0 0 8px; color: #688078; font-size: .7rem; font-weight: 800; letter-spacing: .14em; }
@@ -26,6 +27,16 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .metrics span, .metrics small { display: block; color: #698078; font-size: .78rem; }
 .metrics strong { display: block; margin: 5px 0; color: #123a32; font: 500 2rem Georgia, serif; }
 .metrics .metric-alert strong { color: #b83d35; }
+.notifications-section { margin: 34px 0; scroll-margin-top: 24px; }
+.notifications-empty { margin: 0; padding: 24px 10px; border-bottom: 1px solid #dbe4e0; color: #71827c; font-size: .85rem; }
+.notification-list article { padding: 14px 10px; display: grid; grid-template-columns: 95px 1fr auto; align-items: center; gap: 14px; border-bottom: 1px solid #dbe4e0; }
+.notification-list article.notification-read { opacity: .62; }
+.notification-list strong, .notification-list small { display: block; }
+.notification-list strong { color: #29473f; font-size: .84rem; }
+.notification-list small { margin-top: 4px; color: #71827c; font-size: .7rem; }
+.notification-list button { padding: 8px 10px; background: transparent; color: #34695d; font-size: .72rem; }
+.notification-kind { width: fit-content; padding: 5px 8px; border-radius: 999px; background: #fff2cf; color: #8a6518; font-size: .68rem; }
+.notification-kind.overdue { background: #fde3df; color: #a33d34; }
 .tickets { scroll-margin-top: 24px; }
 .section-heading { padding-bottom: 16px; border-bottom: 2px solid #123a32; }
 .section-heading h2 { margin: 0; }
@@ -159,4 +170,5 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   .category-form { align-items: stretch; flex-direction: column; }
   .attachments-panel form { align-items: stretch; flex-direction: column; }
   .attachments-panel form > small { margin-left: 0; }
+  .notification-list article { grid-template-columns: 1fr; }
 }
