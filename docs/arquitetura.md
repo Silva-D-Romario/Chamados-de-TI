@@ -68,6 +68,13 @@ O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `A
 - O resumo operacional contabiliza toda a visão permitida ao usuário, não apenas a página atual.
 - O mesmo escopo de segurança é aplicado à listagem e aos indicadores: solicitantes veem somente seus dados e a equipe de suporte acessa a fila geral.
 
+## Catálogo de categorias
+
+- O catálogo mantém nomes padronizados para classificação dos chamados.
+- Apenas administradores criam, renomeiam, ativam ou desativam categorias.
+- Solicitantes e técnicos consultam somente categorias ativas.
+- Chamados novos ou editados validam a categoria no backend; categorias inativas permanecem registradas nos chamados antigos para preservar o histórico.
+
 ## Estados iniciais do chamado
 
 ```mermaid

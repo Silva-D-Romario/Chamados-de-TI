@@ -24,10 +24,12 @@ import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository.TicketSummaryProjection;
 import br.com.romariosilva.chamados.ticket.domain.TicketStatus;
 import br.com.romariosilva.chamados.ticket.domain.SlaStatus;
+import br.com.romariosilva.chamados.category.domain.TicketCategoryRepository;
 import br.com.romariosilva.chamados.user.domain.User;
 import br.com.romariosilva.chamados.user.domain.UserRepository;
 
 import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -41,14 +43,17 @@ public class TicketService {
     private final TicketCommentRepository commentRepository;
     private final UserRepository userRepository;
     private final SlaPolicy slaPolicy;
+    private final TicketCategoryRepository categoryRepository;
 
     public TicketService(TicketRepository ticketRepository, TicketHistoryRepository historyRepository,
-            TicketCommentRepository commentRepository, UserRepository userRepository, SlaPolicy slaPolicy) {
+            TicketCommentRepository commentRepository, UserRepository userRepository, SlaPolicy slaPolicy,
+            TicketCategoryRepository categoryRepository) {
         this.ticketRepository = ticketRepository;
         this.historyRepository = historyRepository;
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.slaPolicy = slaPolicy;
+        this.categoryRepository = categoryRepository;
     }
 
     @Transactional
@@ -56,7 +61,7 @@ public class TicketService {
         User requester = currentUser(jwt);
         Instant now = Instant.now();
         Ticket ticket = new Ticket(data.title().trim(), data.description().trim(), data.priority(),
-                data.category().trim(), requester, slaPolicy.deadlineFor(data.priority(), now));
+                activeCategoryName(data.category()), requester, slaPolicy.deadlineFor(data.priority(), now));
         ticketRepository.save(ticket);
         historyRepository.save(new TicketHistory(ticket, requester, TicketHistoryAction.CRIADO,
                 null, TicketStatus.ABERTO, "Chamado aberto"));
@@ -87,7 +92,8 @@ public class TicketService {
     @Transactional
     public TicketResponse update(Jwt jwt, Long id, TicketData data) {
         Ticket ticket = ownedOpenTicket(jwt, id);
-        ticket.updateDetails(data.title().trim(), data.description().trim(), data.priority(), data.category().trim(),
+        ticket.updateDetails(data.title().trim(), data.description().trim(), data.priority(),
+                activeCategoryName(data.category()),
                 slaPolicy.deadlineFor(data.priority(), Instant.now()));
         return response(ticket);
     }
@@ -180,6 +186,12 @@ public class TicketService {
 
     private String normalizeFilter(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private String activeCategoryName(String name) {
+        return categoryRepository.findByNameIgnoreCaseAndActiveTrue(name.trim())
+                .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Categoria inválida ou inativa"))
+                .getName();
     }
 
     private User currentUser(Jwt jwt) {

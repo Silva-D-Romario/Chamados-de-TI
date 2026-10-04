@@ -6,8 +6,12 @@ spring:
     driver-class-name: org.h2.Driver
   jpa:
     open-in-view: false
+    defer-datasource-initialization: true
     hibernate:
       ddl-auto: create-drop
+  sql:
+    init:
+      mode: always
   flyway:
     enabled: false
 

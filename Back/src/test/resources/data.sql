@@ -1,0 +1,6 @@
+INSERT INTO ticket_categories (name, active, created_at, updated_at) VALUES
+    ('Acesso e permissões', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Hardware', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Outros', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Rede', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('Software', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
