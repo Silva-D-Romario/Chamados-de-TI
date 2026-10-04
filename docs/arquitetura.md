@@ -90,6 +90,13 @@ O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `A
 - A restrição única por chamado, destinatário e tipo impede alertas duplicados.
 - Cada usuário consulta e marca como lidas somente as próprias notificações.
 
+## Estratégia de testes
+
+- Os testes de API usam H2 em modo compatível com PostgreSQL para feedback rápido.
+- Uma suíte com Testcontainers inicia PostgreSQL 16 e executa as migrations Flyway do zero.
+- O teste real confirma a validação do esquema pelo Hibernate e a persistência dos relacionamentos principais.
+- O GitHub Actions executa as duas camadas em cada push e Pull Request.
+
 ## Estados iniciais do chamado
 
 ```mermaid
