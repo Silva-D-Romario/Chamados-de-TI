@@ -25,6 +25,7 @@ import br.com.romariosilva.chamados.ticket.domain.TicketRepository.TicketSummary
 import br.com.romariosilva.chamados.ticket.domain.TicketStatus;
 import br.com.romariosilva.chamados.ticket.domain.SlaStatus;
 import br.com.romariosilva.chamados.category.domain.TicketCategoryRepository;
+import br.com.romariosilva.chamados.attachment.application.TicketAttachmentService;
 import br.com.romariosilva.chamados.user.domain.User;
 import br.com.romariosilva.chamados.user.domain.UserRepository;
 
@@ -44,16 +45,18 @@ public class TicketService {
     private final UserRepository userRepository;
     private final SlaPolicy slaPolicy;
     private final TicketCategoryRepository categoryRepository;
+    private final TicketAttachmentService attachmentService;
 
     public TicketService(TicketRepository ticketRepository, TicketHistoryRepository historyRepository,
             TicketCommentRepository commentRepository, UserRepository userRepository, SlaPolicy slaPolicy,
-            TicketCategoryRepository categoryRepository) {
+            TicketCategoryRepository categoryRepository, TicketAttachmentService attachmentService) {
         this.ticketRepository = ticketRepository;
         this.historyRepository = historyRepository;
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.slaPolicy = slaPolicy;
         this.categoryRepository = categoryRepository;
+        this.attachmentService = attachmentService;
     }
 
     @Transactional
@@ -101,6 +104,7 @@ public class TicketService {
     @Transactional
     public void delete(Jwt jwt, Long id) {
         Ticket ticket = ownedOpenTicket(jwt, id);
+        attachmentService.deleteAllFromTicket(id);
         commentRepository.deleteAllByTicketId(id);
         historyRepository.deleteAllByTicketId(id);
         ticketRepository.delete(ticket);

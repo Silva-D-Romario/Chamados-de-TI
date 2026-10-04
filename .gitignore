@@ -10,4 +10,4 @@ Back/target/
 Front/node_modules/
 Front/dist/
 Front/*.tsbuildinfo
-
+Back/data/

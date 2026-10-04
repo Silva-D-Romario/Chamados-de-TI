@@ -19,3 +19,7 @@ security:
   jwt:
     secret: test-secret-with-at-least-thirty-two-characters
     expiration-minutes: 10
+
+app:
+  attachments:
+    directory: target/test-attachments

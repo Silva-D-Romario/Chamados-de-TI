@@ -11,10 +11,12 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.mock.web.MockMultipartFile;
 
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketCommentRepository;
+import br.com.romariosilva.chamados.attachment.domain.TicketAttachmentRepository;
 import br.com.romariosilva.chamados.user.domain.User;
 import br.com.romariosilva.chamados.user.domain.UserRepository;
 import br.com.romariosilva.chamados.user.domain.UserRole;
@@ -26,6 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -50,6 +53,9 @@ class TicketControllerIntegrationTests {
     private TicketCommentRepository commentRepository;
 
     @Autowired
+    private TicketAttachmentRepository attachmentRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -57,6 +63,7 @@ class TicketControllerIntegrationTests {
 
     @BeforeEach
     void cleanDatabase() {
+        attachmentRepository.deleteAll();
         commentRepository.deleteAll();
         historyRepository.deleteAll();
         ticketRepository.deleteAll();
@@ -245,6 +252,48 @@ class TicketControllerIntegrationTests {
                         .header(AUTHORIZATION, bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(ticketJson("Categoria inválida", "MEDIA", "Categoria inexistente")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void attachmentsRespectTicketVisibilityAndFileRules() throws Exception {
+        String ownerToken = register("Solicitante", "owner@example.com");
+        String otherToken = register("Outro", "other@example.com");
+        long ticketId = createTicket(ownerToken, "Enviar evidência");
+        MockMultipartFile document = new MockMultipartFile(
+                "file", "diagnostico.txt", "text/plain", "Erro ao inicializar".getBytes());
+
+        MvcResult upload = mockMvc.perform(multipart("/api/v1/tickets/{id}/attachments", ticketId)
+                        .file(document)
+                        .header(AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.originalName").value("diagnostico.txt"))
+                .andExpect(jsonPath("$.uploader.fullName").value("Solicitante"))
+                .andReturn();
+        long attachmentId = objectMapper.readTree(upload.getResponse().getContentAsString()).get("id").asLong();
+
+        mockMvc.perform(get("/api/v1/tickets/{id}/attachments", ticketId)
+                        .header(AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        mockMvc.perform(get("/api/v1/tickets/{ticketId}/attachments/{attachmentId}", ticketId, attachmentId)
+                        .header(AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    String body = result.getResponse().getContentAsString();
+                    if (!body.equals("Erro ao inicializar")) throw new AssertionError("Conteúdo incorreto");
+                });
+
+        mockMvc.perform(get("/api/v1/tickets/{id}/attachments", ticketId)
+                        .header(AUTHORIZATION, bearer(otherToken)))
+                .andExpect(status().isNotFound());
+
+        MockMultipartFile executable = new MockMultipartFile(
+                "file", "programa.exe", "application/octet-stream", new byte[] { 1, 2, 3 });
+        mockMvc.perform(multipart("/api/v1/tickets/{id}/attachments", ticketId)
+                        .file(executable)
+                        .header(AUTHORIZATION, bearer(ownerToken)))
                 .andExpect(status().isBadRequest());
     }
 

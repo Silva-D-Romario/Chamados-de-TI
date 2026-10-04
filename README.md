@@ -97,6 +97,9 @@ Novos cadastros recebem o perfil `SOLICITANTE`. Rotas protegidas usam o cabeçal
 | `GET` | `/api/v1/tickets/{id}/history` | Retorna o histórico visível ao usuário |
 | `POST` | `/api/v1/tickets/{id}/comments` | Adiciona comentário público; suporte também pode criar comentário interno |
 | `GET` | `/api/v1/tickets/{id}/comments` | Lista comentários permitidos para o perfil autenticado |
+| `POST` | `/api/v1/tickets/{id}/attachments` | Envia um arquivo por formulário multipart |
+| `GET` | `/api/v1/tickets/{id}/attachments` | Lista os anexos permitidos ao usuário |
+| `GET` | `/api/v1/tickets/{id}/attachments/{attachmentId}` | Faz download autenticado do arquivo |
 
 A listagem é paginada e aceita `page`, `size` e `sort`. Também pode ser filtrada por:
 
@@ -109,6 +112,12 @@ A listagem é paginada e aceita `page`, `size` e `sort`. Também pode ser filtra
 | `technicianId` | `3` | Filtra pelo técnico responsável |
 
 O endpoint de resumo aceita os mesmos filtros e retorna totais de chamados abertos, em andamento, resolvidos e com SLA vencido.
+
+### Anexos
+
+Chamados aceitam arquivos PDF, PNG, JPG e TXT de até 5 MB. Os metadados ficam no PostgreSQL e os arquivos são gravados no diretório configurado por `ATTACHMENTS_DIR`, que por padrão é `Back/data/attachments` ao iniciar o backend pela pasta `Back`.
+
+Listagem, envio e download seguem a mesma regra de visibilidade do chamado. O nome usado no armazenamento é gerado internamente para impedir colisões e tentativas de escapar do diretório.
 
 ### Prazos de SLA
 
@@ -193,7 +202,7 @@ compose.yaml       Serviços locais
 - [x] Catálogo de categorias administrável.
 - [x] Pipeline inicial de CI para backend e frontend.
 - [x] Testes de integração e documentação OpenAPI inicial.
-- [ ] Anexos nos chamados.
+- [x] Anexos protegidos nos chamados.
 - [ ] Alertas automáticos de SLA e notificações.
 - [ ] Testes de integração com PostgreSQL real.
 - [ ] Deploy público com dados de demonstração.
