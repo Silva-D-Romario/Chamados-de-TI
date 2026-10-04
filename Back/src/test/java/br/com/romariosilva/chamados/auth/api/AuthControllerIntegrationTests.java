@@ -13,6 +13,7 @@ import br.com.romariosilva.chamados.user.domain.UserRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketHistoryRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketCommentRepository;
 import br.com.romariosilva.chamados.ticket.domain.TicketRepository;
+import br.com.romariosilva.chamados.attachment.domain.TicketAttachmentRepository;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
@@ -41,10 +42,14 @@ class AuthControllerIntegrationTests {
     private TicketRepository ticketRepository;
 
     @Autowired
+    private TicketAttachmentRepository attachmentRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void cleanDatabase() {
+        attachmentRepository.deleteAll();
         commentRepository.deleteAll();
         historyRepository.deleteAll();
         ticketRepository.deleteAll();

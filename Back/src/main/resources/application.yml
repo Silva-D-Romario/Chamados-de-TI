@@ -11,6 +11,10 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -30,6 +34,8 @@ security:
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:120}
 
 app:
+  attachments:
+    directory: ${ATTACHMENTS_DIR:./data/attachments}
   bootstrap-admin:
     name: ${APP_ADMIN_NAME:Administrador}
     email: ${APP_ADMIN_EMAIL:}
