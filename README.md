@@ -94,6 +94,14 @@ Na primeira inicialização são criados três chamados e dois acessos com a sen
 
 A carga é idempotente e não duplica os registros ao reiniciar. Não habilite esse modo em um ambiente com dados reais.
 
+### Deploy público
+
+O repositório inclui um Blueprint para publicar a imagem Docker no Render com PostgreSQL gratuito no Neon:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Silva-D-Romario/Chamados-de-TI)
+
+Consulte o [guia de deploy no Render e Neon](docs/deploy-render.md) para configurar o banco, os segredos e validar a aplicação pública.
+
 ## Executar o backend
 
 Com o PostgreSQL ativo:
@@ -235,6 +243,7 @@ docs/              Arquitetura e documentação complementar
 compose.yaml       Serviços locais
 compose.prod.yaml  Aplicação completa para produção
 Dockerfile         Imagem única do frontend e backend
+render.yaml        Blueprint do deploy no Render
 ```
 
 ## Roadmap inicial
@@ -256,4 +265,5 @@ Dockerfile         Imagem única do frontend e backend
 - [x] Alertas automáticos de SLA e notificações.
 - [x] Testes de integração com PostgreSQL real.
 - [x] Imagem de produção e dados de demonstração.
-- [ ] Deploy público da aplicação.
+- [x] Blueprint reproduzível para deploy público.
+- [ ] Aplicação publicada e monitorada em uma URL pública.
