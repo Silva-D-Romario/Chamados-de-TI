@@ -97,6 +97,14 @@ O cadastro público cria somente solicitantes. A elevação para `TECNICO` ou `A
 - O teste real confirma a validação do esquema pelo Hibernate e a persistência dos relacionamentos principais.
 - O GitHub Actions executa as duas camadas em cada push e Pull Request.
 
+## Empacotamento para produção
+
+- O `Dockerfile` multi-stage gera o frontend, incorpora os arquivos estáticos ao Spring Boot e publica uma única imagem.
+- Interface e API usam a mesma origem, reduzindo a configuração necessária para o deploy.
+- O processo Java é executado por um usuário sem privilégios.
+- PostgreSQL e anexos ficam em volumes persistentes separados no `compose.prod.yaml`.
+- O modo de demonstração é desativado por padrão e cria dados idempotentes somente quando habilitado explicitamente.
+
 ## Estados iniciais do chamado
 
 ```mermaid
