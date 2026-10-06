@@ -17,7 +17,7 @@ spring:
       max-request-size: 6MB
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
 
 management:
   endpoints:
@@ -34,6 +34,9 @@ security:
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:120}
 
 app:
+  demo:
+    enabled: ${APP_DEMO_ENABLED:false}
+    password: ${APP_DEMO_PASSWORD:}
   sla-alerts:
     enabled: ${SLA_ALERTS_ENABLED:true}
     interval-ms: ${SLA_ALERT_INTERVAL_MS:60000}
