@@ -33,6 +33,7 @@ Sistema full stack para abertura, triagem e acompanhamento de chamados de suport
 
 - Docker Compose
 - GitHub Actions
+- Imagem Docker de produção com frontend e API no mesmo serviço
 
 ## Fluxo Git
 
@@ -60,6 +61,38 @@ export APP_ADMIN_PASSWORD="uma-senha-segura"
 
 O administrador é criado apenas quando o e-mail ainda não existe. Depois do primeiro acesso, ele pode promover outros usuários para técnico ou administrador pela interface.
 Após uma alteração de perfil, o usuário deve sair e entrar novamente para receber um JWT com a nova permissão.
+
+## Executar a aplicação completa com Docker
+
+```bash
+cp .env.example .env
+# Substitua POSTGRES_PASSWORD e JWT_SECRET por valores seguros.
+docker compose -f compose.prod.yaml up -d --build
+```
+
+A interface e a API ficam disponíveis em `http://localhost:8080`. O PostgreSQL e os anexos usam volumes persistentes. A aplicação é executada por um usuário sem privilégios dentro do contêiner.
+
+Para encerrar sem apagar os dados:
+
+```bash
+docker compose -f compose.prod.yaml down
+```
+
+### Dados de demonstração
+
+O modo de demonstração é opcional e vem desativado. Para apresentar o projeto, configure no `.env`:
+
+```dotenv
+APP_DEMO_ENABLED=true
+APP_DEMO_PASSWORD=uma-senha-demo-segura
+```
+
+Na primeira inicialização são criados três chamados e dois acessos com a senha definida em `APP_DEMO_PASSWORD`:
+
+- `solicitante@demo.local`
+- `tecnico@demo.local`
+
+A carga é idempotente e não duplica os registros ao reiniciar. Não habilite esse modo em um ambiente com dados reais.
 
 ## Executar o backend
 
@@ -200,6 +233,8 @@ Front/             Aplicação React
 docs/              Arquitetura e documentação complementar
 .github/workflows/ Integração contínua
 compose.yaml       Serviços locais
+compose.prod.yaml  Aplicação completa para produção
+Dockerfile         Imagem única do frontend e backend
 ```
 
 ## Roadmap inicial
@@ -220,4 +255,5 @@ compose.yaml       Serviços locais
 - [x] Anexos protegidos nos chamados.
 - [x] Alertas automáticos de SLA e notificações.
 - [x] Testes de integração com PostgreSQL real.
-- [ ] Deploy público com dados de demonstração.
+- [x] Imagem de produção e dados de demonstração.
+- [ ] Deploy público da aplicação.

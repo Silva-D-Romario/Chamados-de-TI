@@ -1,0 +1,10 @@
+.git
+.github
+.idea
+.vscode
+.env
+Back/target
+Back/data
+Front/node_modules
+Front/dist
+*.log
