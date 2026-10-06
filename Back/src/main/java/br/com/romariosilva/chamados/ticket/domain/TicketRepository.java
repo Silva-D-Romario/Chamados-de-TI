@@ -12,6 +12,8 @@ import java.util.List;
 
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
+    boolean existsByRequesterEmailIgnoreCaseAndTitle(String requesterEmail, String title);
+
     @EntityGraph(attributePaths = { "requester", "technician" })
     @Query("SELECT ticket FROM Ticket ticket WHERE ticket.resolvedAt IS NULL")
     List<Ticket> findAllPendingForSlaAlerts();
@@ -19,13 +21,16 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     @EntityGraph(attributePaths = { "requester", "technician" })
     @Query("""
             SELECT ticket FROM Ticket ticket
-            WHERE (:requesterEmail IS NULL OR LOWER(ticket.requester.email) = LOWER(:requesterEmail))
+            WHERE (CAST(:requesterEmail AS string) IS NULL
+                   OR LOWER(ticket.requester.email) = LOWER(CAST(:requesterEmail AS string)))
               AND (:status IS NULL OR ticket.status = :status)
               AND (:priority IS NULL OR ticket.priority = :priority)
-              AND (:category IS NULL OR LOWER(ticket.category) = LOWER(:category))
+              AND (CAST(:category AS string) IS NULL
+                   OR LOWER(ticket.category) = LOWER(CAST(:category AS string)))
               AND (:technicianId IS NULL OR ticket.technician.id = :technicianId)
-              AND (:search IS NULL OR LOWER(ticket.title) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(ticket.description) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (CAST(:search AS string) IS NULL
+                   OR LOWER(ticket.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                   OR LOWER(ticket.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
             """)
     Page<Ticket> search(
             @Param("requesterEmail") String requesterEmail,
@@ -47,13 +52,16 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
                        br.com.romariosilva.chamados.ticket.domain.TicketStatus.FECHADO) THEN 1 ELSE 0 END), 0) AS resolved,
                    COALESCE(SUM(CASE WHEN ticket.resolvedAt IS NULL AND ticket.dueAt <= :now THEN 1 ELSE 0 END), 0) AS overdue
             FROM Ticket ticket
-            WHERE (:requesterEmail IS NULL OR LOWER(ticket.requester.email) = LOWER(:requesterEmail))
+            WHERE (CAST(:requesterEmail AS string) IS NULL
+                   OR LOWER(ticket.requester.email) = LOWER(CAST(:requesterEmail AS string)))
               AND (:status IS NULL OR ticket.status = :status)
               AND (:priority IS NULL OR ticket.priority = :priority)
-              AND (:category IS NULL OR LOWER(ticket.category) = LOWER(:category))
+              AND (CAST(:category AS string) IS NULL
+                   OR LOWER(ticket.category) = LOWER(CAST(:category AS string)))
               AND (:technicianId IS NULL OR ticket.technician.id = :technicianId)
-              AND (:search IS NULL OR LOWER(ticket.title) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(ticket.description) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (CAST(:search AS string) IS NULL
+                   OR LOWER(ticket.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                   OR LOWER(ticket.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
             """)
     TicketSummaryProjection summarize(
             @Param("requesterEmail") String requesterEmail,

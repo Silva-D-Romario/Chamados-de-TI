@@ -5,6 +5,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -77,6 +78,10 @@ class PostgresMigrationIntegrationTests {
                 "Alerta persistido no PostgreSQL"));
 
         assertThat(ticketRepository.findById(ticket.getId())).isPresent();
+        assertThat(ticketRepository.search(requester.getEmail(), null, null, null, null, null,
+                PageRequest.of(0, 10))).singleElement().extracting(Ticket::getId).isEqualTo(ticket.getId());
+        assertThat(ticketRepository.summarize(requester.getEmail(), null, null, null, null, null, Instant.now())
+                .getTotal()).isEqualTo(1);
         assertThat(notificationRepository
                 .findAllByRecipientEmailIgnoreCaseOrderByCreatedAtDesc(requester.getEmail()))
                 .singleElement()
