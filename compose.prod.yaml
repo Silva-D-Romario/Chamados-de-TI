@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-chamados}
+      POSTGRES_USER: ${POSTGRES_USER:-chamados}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+    volumes:
+      - chamados_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chamados} -d ${POSTGRES_DB:-chamados}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chamados}
+      DB_USER: ${POSTGRES_USER:-chamados}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET}
+      APP_ADMIN_NAME: ${APP_ADMIN_NAME:-Administrador}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
+      APP_DEMO_ENABLED: ${APP_DEMO_ENABLED:-false}
+      APP_DEMO_PASSWORD: ${APP_DEMO_PASSWORD:-}
+      ATTACHMENTS_DIR: /data/attachments
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - chamados_attachments:/data/attachments
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  chamados_postgres_data:
+  chamados_attachments:

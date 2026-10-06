@@ -47,3 +47,11 @@ jobs:
         run: npm run lint
       - name: Gerar build
         run: npm run build
+
+  docker:
+    name: Imagem Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gerar imagem de produção
+        run: docker build --tag chamados-ti:ci .
