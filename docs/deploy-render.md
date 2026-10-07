@@ -2,6 +2,12 @@
 
 Esta configuração usa o Render para executar a imagem Docker e o Neon para manter o PostgreSQL. O banco externo evita a expiração de 30 dias do PostgreSQL gratuito do Render.
 
+## Responsabilidade de cada serviço
+
+- **Neon:** hospeda o PostgreSQL persistente. Usuários, chamados, categorias, comentários, notificações e históricos continuam armazenados mesmo quando a aplicação reinicia.
+- **Render:** constrói o `Dockerfile`, executa o frontend e a API Spring Boot, mantém as variáveis de ambiente e fornece a URL pública. No plano gratuito, o serviço pode hibernar quando fica sem acessos.
+- **GitHub:** mantém o código e dispara novos deploys da branch `main` depois que os checks passam.
+
 ## 1. Criar o banco no Neon
 
 1. Crie um projeto PostgreSQL gratuito no Neon.
@@ -21,7 +27,29 @@ Ao criar o Blueprint, informe os três dados do Neon e uma senha de pelo menos o
 
 O serviço usa o plano gratuito, a branch `main`, o `Dockerfile` da raiz e o endpoint `/actuator/health`. Novos commits são publicados somente depois que os checks do GitHub passam.
 
-## 3. Validar o deploy
+## 3. Criar o primeiro administrador
+
+O cadastro público cria somente usuários `SOLICITANTE`. Para criar o primeiro administrador no Render:
+
+1. Abra o serviço publicado e acesse **Environment**.
+2. Clique em **Edit** e depois em **Add variable** três vezes.
+3. Adicione as variáveis abaixo, usando uma coluna para a chave e outra para o valor:
+
+   | Chave | Valor de exemplo |
+   | --- | --- |
+   | `APP_ADMIN_NAME` | `Administrador` |
+   | `APP_ADMIN_EMAIL` | `admin@example.com` |
+   | `APP_ADMIN_PASSWORD` | uma senha forte com pelo menos 8 caracteres |
+
+4. Use um e-mail que ainda não esteja cadastrado.
+5. Clique em **Save, rebuild, and deploy**.
+6. Depois do deploy, entre com o administrador.
+
+O administrador pode abrir **Equipe e permissões** e promover um usuário cadastrado para `TECNICO` ou `ADMIN`. O usuário alterado precisa sair e entrar novamente para receber um token com a nova permissão.
+
+Quem apenas clonar o repositório também pode criar o administrador preenchendo `APP_ADMIN_NAME`, `APP_ADMIN_EMAIL` e `APP_ADMIN_PASSWORD` no arquivo `.env` antes de executar `docker compose -f compose.prod.yaml up -d --build`.
+
+## 4. Validar o deploy
 
 Após o serviço ficar disponível, valide:
 

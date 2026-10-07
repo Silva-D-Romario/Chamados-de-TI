@@ -1,5 +1,5 @@
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 250px 1fr; }
-.sidebar { background: #102f29; color: #eef8f5; padding: 32px 24px; display: flex; flex-direction: column; }
+.sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: #102f29; color: #eef8f5; padding: 32px 24px; display: flex; flex-direction: column; }
 .brand { display: flex; align-items: center; gap: 12px; font: 700 1.2rem Georgia, serif; margin-bottom: 48px; }
 .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: #c9f269; color: #102f29; font: 800 .75rem system-ui; }
 nav { display: grid; gap: 8px; }
@@ -102,7 +102,15 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .sla.vencido { background: #fde3df; color: #a33d34 !important; }
 .sla.concluido { background: #e5f0fc; color: #336b99 !important; }
 .workflow-control { display: grid; gap: 5px; color: #5c716a; font-size: .7rem; }
-.workflow-control select { min-width: 170px; padding: 8px; border: 1px solid #cad7d2; border-radius: 7px; background: #fff; color: #29473f; }
+.workflow-menu { position: relative; min-width: 170px; }
+.workflow-menu summary { min-height: 35px; padding: 8px 30px 8px 10px; position: relative; border: 1px solid #cad7d2; border-radius: 7px; background: #fff; color: #29473f; cursor: pointer; list-style: none; font-size: .78rem; }
+.workflow-menu summary::-webkit-details-marker { display: none; }
+.workflow-menu summary::after { content: "\25BE"; position: absolute; right: 10px; color: #60776f; }
+.workflow-menu[open] summary { border-color: #417c6e; box-shadow: 0 0 0 3px #dcece7; }
+.workflow-menu-options { min-width: 100%; padding: 5px; position: absolute; z-index: 20; top: calc(100% + 5px); right: 0; display: grid; gap: 3px; border: 1px solid #cad7d2; border-radius: 8px; background: #fff; box-shadow: 0 12px 28px rgba(18, 58, 50, .18); }
+.workflow-menu-options button { width: 100%; padding: 9px 10px; background: transparent; color: #29473f; text-align: left; font-size: .78rem; }
+.workflow-menu-options button:hover { background: #edf4f1; }
+.workflow-menu-options button:disabled { background: #e4ebe8; color: #60776f; }
 .history-panel { grid-column: 1 / -1; padding: 16px; border-radius: 9px; background: #f0f5f2; }
 .history-panel > strong { color: #24473f; font-size: .84rem; }
 .history-panel > div { margin-top: 10px; padding-left: 14px; border-left: 2px solid #a8c4bc; }
@@ -147,7 +155,7 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   .auth-intro .brand { margin-bottom: 0; }
   .auth-panel { padding: 38px 24px; }
   .app-shell { grid-template-columns: 1fr; }
-  .sidebar { padding: 18px 20px; }
+  .sidebar { position: static; height: auto; overflow: visible; padding: 18px 20px; }
   .brand { margin-bottom: 18px; }
   nav { display: flex; overflow-x: auto; }
   .nav-item { white-space: nowrap; }

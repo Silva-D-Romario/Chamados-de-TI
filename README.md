@@ -100,7 +100,9 @@ O repositório inclui um Blueprint para publicar a imagem Docker no Render com P
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Silva-D-Romario/Chamados-de-TI)
 
-Consulte o [guia de deploy no Render e Neon](docs/deploy-render.md) para configurar o banco, os segredos e validar a aplicação pública.
+O Neon mantém os dados do PostgreSQL, enquanto o Render constrói e executa a aplicação Docker em uma URL pública. O cadastro aberto cria somente solicitantes; quem implantar sua própria cópia define o primeiro administrador por variáveis de ambiente e depois promove técnicos pela interface.
+
+Consulte o [guia de deploy no Render e Neon](docs/deploy-render.md) para configurar o banco, criar o primeiro administrador, preparar os demais perfis e validar a aplicação pública.
 
 ## Executar o backend
 
