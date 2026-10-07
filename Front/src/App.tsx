@@ -98,6 +98,7 @@ function App() {
   const [attachments, setAttachments] = useState<TicketAttachment[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [openWorkflowMenu, setOpenWorkflowMenu] = useState<string | null>(null)
 
   const filterParams = useCallback(() => {
     const params = new URLSearchParams()
@@ -360,6 +361,7 @@ function App() {
 
   async function assignTicket(ticketId: number, technicianId: string) {
     if (!technicianId) return
+    setOpenWorkflowMenu(null)
     setTicketError('')
     const response = await fetch(`/api/v1/tickets/${ticketId}/assignment`, {
       method: 'PATCH',
@@ -375,6 +377,7 @@ function App() {
 
   async function changeTicketStatus(ticket: Ticket, status: string) {
     if (status === ticket.status) return
+    setOpenWorkflowMenu(null)
     const note = window.prompt('Observação sobre a mudança de status (opcional):')
     if (note === null) return
     setTicketError('')
@@ -617,7 +620,13 @@ function App() {
                   {user.role === 'ADMIN' && (
                     <div className="workflow-control">
                       <span>Atribuir técnico</span>
-                      <details className="workflow-menu">
+                      <details
+                        className="workflow-menu"
+                        open={openWorkflowMenu === `assignment-${ticket.id}`}
+                        onToggle={(event) => setOpenWorkflowMenu((current) => event.currentTarget.open
+                          ? `assignment-${ticket.id}`
+                          : current === `assignment-${ticket.id}` ? null : current)}
+                      >
                         <summary>{ticket.technician?.fullName ?? 'Selecione'}</summary>
                         <div className="workflow-menu-options">
                           {technicians.map((technician) => (
@@ -637,7 +646,13 @@ function App() {
                   {(user.role === 'ADMIN' || user.role === 'TECNICO') && NEXT_STATUSES[ticket.status]?.length > 0 && (
                     <div className="workflow-control">
                       <span>Próximo status</span>
-                      <details className="workflow-menu">
+                      <details
+                        className="workflow-menu"
+                        open={openWorkflowMenu === `status-${ticket.id}`}
+                        onToggle={(event) => setOpenWorkflowMenu((current) => event.currentTarget.open
+                          ? `status-${ticket.id}`
+                          : current === `status-${ticket.id}` ? null : current)}
+                      >
                         <summary>Selecione</summary>
                         <div className="workflow-menu-options">
                           {NEXT_STATUSES[ticket.status].map((status) => (
