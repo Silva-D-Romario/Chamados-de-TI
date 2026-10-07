@@ -106,6 +106,10 @@ function App() {
     return params
   }, [filters])
 
+  function handleWorkflowMenuToggle(menuId: string, isOpen: boolean) {
+    setOpenWorkflowMenu((current) => isOpen ? menuId : current === menuId ? null : current)
+  }
+
   const loadTickets = useCallback(async () => {
     const params = filterParams()
     params.set('page', String(ticketPage))
@@ -623,9 +627,8 @@ function App() {
                       <details
                         className="workflow-menu"
                         open={openWorkflowMenu === `assignment-${ticket.id}`}
-                        onToggle={(event) => setOpenWorkflowMenu((current) => event.currentTarget.open
-                          ? `assignment-${ticket.id}`
-                          : current === `assignment-${ticket.id}` ? null : current)}
+                        onToggle={(event) => handleWorkflowMenuToggle(
+                          `assignment-${ticket.id}`, event.currentTarget.open)}
                       >
                         <summary>{ticket.technician?.fullName ?? 'Selecione'}</summary>
                         <div className="workflow-menu-options">
@@ -649,9 +652,8 @@ function App() {
                       <details
                         className="workflow-menu"
                         open={openWorkflowMenu === `status-${ticket.id}`}
-                        onToggle={(event) => setOpenWorkflowMenu((current) => event.currentTarget.open
-                          ? `status-${ticket.id}`
-                          : current === `status-${ticket.id}` ? null : current)}
+                        onToggle={(event) => handleWorkflowMenuToggle(
+                          `status-${ticket.id}`, event.currentTarget.open)}
                       >
                         <summary>Selecione</summary>
                         <div className="workflow-menu-options">
