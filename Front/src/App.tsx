@@ -615,20 +615,39 @@ function App() {
                     <button type="button" onClick={() => showAttachments(ticket.id)}>Anexos</button>
                   </div>
                   {user.role === 'ADMIN' && (
-                    <label className="workflow-control">Atribuir técnico
-                      <select value={ticket.technician?.id ?? ''} onChange={(event) => assignTicket(ticket.id, event.target.value)}>
-                        <option value="">Selecione</option>
-                        {technicians.map((technician) => <option key={technician.id} value={technician.id}>{technician.fullName}</option>)}
-                      </select>
-                    </label>
+                    <div className="workflow-control">
+                      <span>Atribuir técnico</span>
+                      <details className="workflow-menu">
+                        <summary>{ticket.technician?.fullName ?? 'Selecione'}</summary>
+                        <div className="workflow-menu-options">
+                          {technicians.map((technician) => (
+                            <button
+                              key={technician.id}
+                              type="button"
+                              disabled={ticket.technician?.id === technician.id}
+                              onClick={() => assignTicket(ticket.id, String(technician.id))}
+                            >
+                              {technician.fullName}
+                            </button>
+                          ))}
+                        </div>
+                      </details>
+                    </div>
                   )}
                   {(user.role === 'ADMIN' || user.role === 'TECNICO') && NEXT_STATUSES[ticket.status]?.length > 0 && (
-                    <label className="workflow-control">Próximo status
-                      <select value="" onChange={(event) => changeTicketStatus(ticket, event.target.value)}>
-                        <option value="">Selecione</option>
-                        {NEXT_STATUSES[ticket.status].map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}
-                      </select>
-                    </label>
+                    <div className="workflow-control">
+                      <span>Próximo status</span>
+                      <details className="workflow-menu">
+                        <summary>Selecione</summary>
+                        <div className="workflow-menu-options">
+                          {NEXT_STATUSES[ticket.status].map((status) => (
+                            <button key={status} type="button" onClick={() => changeTicketStatus(ticket, status)}>
+                              {formatStatus(status)}
+                            </button>
+                          ))}
+                        </div>
+                      </details>
+                    </div>
                   )}
                   {historyTicketId === ticket.id && (
                     <div className="history-panel">
