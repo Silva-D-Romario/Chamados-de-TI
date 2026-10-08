@@ -382,18 +382,18 @@ function App() {
   async function changeTicketStatus(ticket: Ticket, status: string) {
     if (status === ticket.status) return
     setOpenWorkflowMenu(null)
-    const note = window.prompt('Observação sobre a mudança de status (opcional):')
-    if (note === null) return
     setTicketError('')
     const response = await fetch(`/api/v1/tickets/${ticket.id}/status`, {
       method: 'PATCH',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, note }),
+      body: JSON.stringify({ status, note: null }),
     })
     if (!response.ok) {
       setTicketError('Transição de status não permitida.')
       return
     }
+    const updatedTicket = await response.json() as Ticket
+    setTickets((current) => current.map((item) => item.id === updatedTicket.id ? updatedTicket : item))
     await Promise.all([loadTickets(), loadSummary()])
     if (historyTicketId === ticket.id) setHistoryTicketId(null)
   }
@@ -648,18 +648,19 @@ function App() {
                   )}
                   {(user.role === 'ADMIN' || user.role === 'TECNICO') && NEXT_STATUSES[ticket.status]?.length > 0 && (
                     <div className="workflow-control">
-                      <span>Próximo status</span>
+                      <span>Status atual</span>
                       <details
                         className="workflow-menu"
                         open={openWorkflowMenu === `status-${ticket.id}`}
                         onToggle={(event) => handleWorkflowMenuToggle(
                           `status-${ticket.id}`, event.currentTarget.open)}
                       >
-                        <summary>Selecione</summary>
+                        <summary>{formatStatus(ticket.status)}</summary>
                         <div className="workflow-menu-options">
+                          <button type="button" disabled>Atual: {formatStatus(ticket.status)}</button>
                           {NEXT_STATUSES[ticket.status].map((status) => (
                             <button key={status} type="button" onClick={() => changeTicketStatus(ticket, status)}>
-                              {formatStatus(status)}
+                              Alterar para: {formatStatus(status)}
                             </button>
                           ))}
                         </div>
