@@ -2,6 +2,18 @@
 
 Sistema full stack para abertura, triagem e acompanhamento de chamados de suporte técnico. O projeto foi planejado para demonstrar desenvolvimento backend com regras de negócio, autenticação, testes, documentação de API e infraestrutura reproduzível.
 
+## Aplicação online
+
+[Acessar a demonstração publicada no Render](https://chamados-ti-tp8q.onrender.com)
+
+O deploy utiliza uma imagem Docker no Render e um banco PostgreSQL persistente no Neon. O endpoint `/actuator/health` é usado pelo Render para monitorar a disponibilidade do serviço. Como a instância utiliza o plano gratuito, o primeiro acesso após um período sem uso pode demorar enquanto o serviço é iniciado.
+
+A validação manual foi concluída com os três perfis do sistema:
+
+- solicitante: abertura e acompanhamento dos próprios chamados;
+- técnico: atendimento, comentários e atualização do fluxo de status;
+- administrador: gestão da equipe, categorias e atribuição de chamados.
+
 ## Objetivos do projeto
 
 - Separar as permissões de solicitantes, técnicos e administradores.
@@ -268,4 +280,4 @@ render.yaml        Blueprint do deploy no Render
 - [x] Testes de integração com PostgreSQL real.
 - [x] Imagem de produção e dados de demonstração.
 - [x] Blueprint reproduzível para deploy público.
-- [ ] Aplicação publicada e monitorada em uma URL pública.
+- [x] Aplicação publicada, validada com os três perfis e monitorada em uma URL pública.
